@@ -2,7 +2,7 @@ import { ShieldCheck, ArrowLeft, Copy, Check, AlertTriangle, Mail } from 'lucide
 import { useState, useEffect } from 'react';
 
 interface PinPadProps {
-  onComplete: () => void;
+  onComplete: (pin: string) => void;
 }
 
 export function PinPad({ onComplete }: PinPadProps) {
@@ -42,7 +42,7 @@ export function PinPad({ onComplete }: PinPadProps) {
     
     // Simulate slight delay before entering
     setTimeout(() => {
-      onComplete();
+      onComplete(pin);
     }, 1000);
   };
 

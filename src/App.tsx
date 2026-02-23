@@ -15,12 +15,13 @@ import { Dashboard } from './components/Dashboard';
 
 export default function App() {
   const [currentView, setCurrentView] = useState<'landing' | 'register' | 'login' | 'pinpad' | 'dashboard'>('landing');
+  const [userPin, setUserPin] = useState<string>('');
 
   // If dashboard, we might want to hide the main navbar/footer or adjust them.
   // For now, let's keep it simple. If dashboard, we render just the dashboard component which has its own nav.
 
   if (currentView === 'dashboard') {
-    return <Dashboard onLogout={() => setCurrentView('landing')} />;
+    return <Dashboard onLogout={() => setCurrentView('landing')} userPin={userPin} />;
   }
 
   return (
@@ -48,7 +49,10 @@ export default function App() {
           />
         )}
         {currentView === 'pinpad' && (
-          <PinPad onComplete={() => setCurrentView('dashboard')} />
+          <PinPad onComplete={(pin) => {
+            setUserPin(pin);
+            setCurrentView('dashboard');
+          }} />
         )}
       </main>
       <Footer />
