@@ -35,7 +35,7 @@ const ModalGravacao = ({ onClose, onSave, onFileAttach }: { onClose: () => void,
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl border border-white/10">
+      <div className="bg-white dark:bg-slate-900 rounded-3xl w-[92%] max-w-md overflow-hidden shadow-2xl border border-white/10">
         <div className="p-6">
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-xl font-bold">Nova Gravação</h3>
@@ -68,7 +68,7 @@ const ModalSuporte = ({ onClose, message, setMessage, onSend }: { onClose: () =>
   const [faqOpen, setFaqOpen] = useState<number | null>(null);
   return (
     <div className="fixed inset-0 bg-black/40 backdrop-blur-md z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4">
-      <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-t-3xl sm:rounded-3xl w-full max-w-md shadow-2xl border border-white/20 dark:border-slate-700/50 max-h-[90vh] overflow-y-auto">
+      <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-t-3xl sm:rounded-3xl w-[92%] max-w-md shadow-2xl border border-white/20 dark:border-slate-700/50 max-h-[90vh] overflow-y-auto">
         <div className="p-6">
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-xl font-bold">Centro de Ajuda Safe360</h3>
@@ -138,7 +138,7 @@ const ModalExtraUser = ({ onClose, categories }: { onClose: () => void, categori
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl border border-white/10">
+      <div className="bg-white dark:bg-slate-900 rounded-3xl w-[92%] max-w-sm overflow-hidden shadow-2xl border border-white/10">
         <div className="p-6">
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-xl font-bold">Gerenciar Acessos</h3>
@@ -170,7 +170,7 @@ const ModalExtraUser = ({ onClose, categories }: { onClose: () => void, categori
               <h3 className="text-lg font-bold mb-3">Permissões de Acesso</h3>
               <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">Selecione os cofres que este usuário poderá acessar.</p>
               
-              <div className="space-y-2 text-left mb-4 max-h-40 overflow-y-auto p-1">
+              <div className="space-y-2 text-left mb-4 max-h-40 overflow-y-auto p-1 scrollbar-hide">
                 <div className="flex items-center p-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800">
                   <input 
                     type="checkbox"
@@ -447,7 +447,7 @@ export function Dashboard({ onLogout, userPin }: DashboardProps) {
           <ShieldCheck className="text-blue-600" size={24} />
           <span className="font-bold text-lg tracking-tight">Safe360</span>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 text-xs font-semibold">
             <span className={`w-2 h-2 rounded-full ${isOnline ? 'bg-green-500' : 'bg-red-500'}`}></span>
             <span className={isOnline ? 'text-green-600 dark:text-green-400' : 'text-red-500'}>
@@ -485,7 +485,7 @@ export function Dashboard({ onLogout, userPin }: DashboardProps) {
           onDeleteItem={(id) => handleDeleteRequest(id, 'item')}
         />
       ) : (
-        <main className="p-4 max-w-lg mx-auto pb-24">
+        <main className="p-4 max-w-full px-4 mx-auto pb-24">
           <div className="mb-8">
             <h1 className="text-2xl font-bold mb-1">Olá, Usuário</h1>
             <p className="text-slate-500 dark:text-slate-400 text-sm">Seu cofre está seguro.</p>
@@ -518,7 +518,7 @@ export function Dashboard({ onLogout, userPin }: DashboardProps) {
           {securityLogs.length > 0 && (
             <div className="mb-8">
               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Logs de Segurança</h3>
-              <div className="space-y-2 text-xs font-mono bg-slate-100 dark:bg-slate-800/50 p-4 rounded-2xl max-h-32 overflow-y-auto">
+              <div className="space-y-2 text-xs font-mono bg-slate-100 dark:bg-slate-800/50 p-4 rounded-2xl max-h-32 overflow-y-auto scrollbar-hide">
                 {securityLogs.map((log, i) => (
                   <p key={i} className="text-slate-500 dark:text-slate-400">{log}</p>
                 ))}
