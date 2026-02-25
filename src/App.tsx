@@ -1,3 +1,4 @@
+// MANTENHA TODAS AS TELAS E LOGICAS DE SEGURANÇA. NÃO DELETE COMPONENTES EXISTENTES.
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0

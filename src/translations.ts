@@ -17,17 +17,17 @@ export const translations = {
       free: {
         name: 'FREE',
         price: 'R$ 0',
-        features: ['Até 10 itens', 'Criptografia Local', 'Acesso Mobile'],
+        features: ['Até 200MB de gravação', 'Criptografia Local', 'Acesso Mobile'],
       },
       pro: {
         name: 'PRO',
         price: 'R$ 19,90',
-        features: ['Itens Ilimitados', 'Backup em Nuvem', 'Suporte Prioritário', 'Acesso para Convidados'],
+        features: ['Até 500MB de gravação', 'Backup em Nuvem', 'Suporte Prioritário', 'Acesso para Convidados'],
       },
       scale: {
         name: 'SCALE',
         price: 'R$ 49,90',
-        features: ['Tudo do PRO', 'Compartilhamento em Equipe', 'Logs de Auditoria', 'API de Integração'],
+        features: ['Até 2GB de gravação', 'Compartilhamento em Equipe', 'Logs de Auditoria', 'API de Integração'],
       },
       cta: 'Escolher Plano',
     },
@@ -251,17 +251,17 @@ export const translations = {
       free: {
         name: 'FREE',
         price: '$ 0',
-        features: ['Up to 10 items', 'Local Encryption', 'Mobile Access'],
+        features: ['Up to 200MB storage', 'Local Encryption', 'Mobile Access'],
       },
       pro: {
         name: 'PRO',
         price: '$ 4.90',
-        features: ['Unlimited Items', 'Cloud Backup', 'Priority Support', 'Guest Access'],
+        features: ['Up to 500MB storage', 'Cloud Backup', 'Priority Support', 'Guest Access'],
       },
       scale: {
         name: 'SCALE',
         price: '$ 12.90',
-        features: ['Everything in PRO', 'Team Sharing', 'Audit Logs', 'Integration API'],
+        features: ['Up to 2GB storage', 'Team Sharing', 'Audit Logs', 'Integration API'],
       },
       cta: 'Choose Plan',
     },
