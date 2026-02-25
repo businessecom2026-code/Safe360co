@@ -27,6 +27,36 @@ export default function App() {
   // If dashboard, we might want to hide the main navbar/footer or adjust them.
   // For now, let's keep it simple. If dashboard, we render just the dashboard component which has its own nav.
 
+  if (currentView === 'dashboard' || currentView === 'pinpad') {
+    if (currentView === 'pinpad') {
+      return (
+        <PinPad 
+          savedMasterKey={masterKey}
+          onMasterKeyGenerated={(key) => setMasterKey(key)}
+          onRecoveryInitiated={() => setRecoveryInitiated(true)}
+          onComplete={(pin) => {
+            setUserPin(pin);
+            setCurrentView('dashboard');
+          }} 
+          lang={lang}
+        />
+      );
+    }
+    return (
+      <Dashboard 
+        onLogout={() => {
+          setCurrentView('landing');
+          setRecoveryInitiated(false);
+        }} 
+        userPin={userPin} 
+        masterKey={masterKey}
+        initialRecoveryLog={recoveryInitiated}
+        lang={lang}
+        setLang={setLang}
+      />
+    );
+  }
+
   if (currentView === 'dashboard') {
     return (
       <Dashboard 
@@ -70,18 +100,6 @@ export default function App() {
             onBack={() => setCurrentView('landing')}
             onSuccess={() => setCurrentView('pinpad')}
             onRegister={() => setCurrentView('register')}
-            lang={lang}
-          />
-        )}
-        {currentView === 'pinpad' && (
-          <PinPad 
-            savedMasterKey={masterKey}
-            onMasterKeyGenerated={(key) => setMasterKey(key)}
-            onRecoveryInitiated={() => setRecoveryInitiated(true)}
-            onComplete={(pin) => {
-              setUserPin(pin);
-              setCurrentView('dashboard');
-            }} 
             lang={lang}
           />
         )}

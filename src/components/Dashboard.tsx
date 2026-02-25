@@ -29,6 +29,11 @@ interface Category {
   color: string;
 }
 
+interface InvitedUser {
+  email: string;
+  permissions: string[];
+}
+
 const ModalGravacao = ({ onClose, onSave, onFileAttach }: { onClose: () => void, onSave: (title: string, description: string) => void, onFileAttach: () => void }) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -105,7 +110,7 @@ const ModalSuporte = ({ onClose, message, setMessage, onSend }: { onClose: () =>
   );
 };
 
-const ModalExtraUser = ({ onClose, categories }: { onClose: () => void, categories: Category[] }) => {
+const ModalExtraUser = ({ onClose, categories, onInvite, invitedUsers }: { onClose: () => void, categories: Category[], onInvite: (email: string, permissions: string[]) => void, invitedUsers: InvitedUser[] }) => {
   const [step, setStep] = useState<'start' | 'checkout' | 'confirmed' | 'success'>('start');
   const [inviteLink, setInviteLink] = useState('');
   const [email, setEmail] = useState('');
@@ -148,6 +153,20 @@ const ModalExtraUser = ({ onClose, categories }: { onClose: () => void, categori
           {step === 'start' && (
             <div className="text-center">
               <p className="text-slate-500 dark:text-slate-400 mb-6">Adicione um novo membro à sua conta para compartilhar o acesso de forma segura.</p>
+
+              {invitedUsers.length > 0 && (
+                <div className="mb-6 text-left">
+                  <h4 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-3">Usuários Ativos</h4>
+                  <div className="space-y-2">
+                    {invitedUsers.map(user => (
+                      <div key={user.email} className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-lg">
+                        <p className="text-sm font-semibold">{user.email}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">Acesso a: {user.permissions.map(pId => categories.find(c => c.id === pId)?.name).join(', ')}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               <button onClick={handlePurchase} className="w-full py-4 bg-blue-600 text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-blue-700 transition-all">
                 <UserPlus size={20} /> Comprar Slot Extra (€ 2,00)
               </button>
@@ -222,18 +241,20 @@ const ModalExtraUser = ({ onClose, categories }: { onClose: () => void, categori
                 <p className="text-sm font-mono text-blue-500">{inviteLink}</p>
               </div>
 
-              <button 
-                onClick={() => navigator.clipboard.writeText(inviteLink).then(() => alert('Link copiado!'))} 
-                className="w-full py-3 bg-emerald-600 text-white rounded-xl font-bold mb-4 hover:bg-emerald-700 transition-all">
-                Copiar Link para enviar no WhatsApp
-              </button>
+              <a 
+                href={`https://wa.me/?text=Olá! Você foi convidado para acessar meus cofres no Safe360. Use este link para criar seu PIN de acesso: ${encodeURIComponent(inviteLink)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full block text-center py-3 bg-emerald-600 text-white rounded-xl font-bold mb-4 hover:bg-emerald-700 transition-all">
+                Enviar Convite via WhatsApp
+              </a>
 
               <div className="text-left text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/50 p-3 rounded-lg mb-6">
                 <p className="font-bold mb-1">Instruções para o Convidado:</p>
                 <p>O convidado precisará definir o próprio PIN de acesso aos cofres permitidos: <span className="font-semibold">{categories.filter(c => selectedPermissions.includes(c.id)).map(c => c.name).join(', ')}</span>.</p>
               </div>
 
-              <button onClick={onClose} className="w-full py-3 bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-xl font-bold hover:opacity-90 transition-all">Fechar</button>
+              <button onClick={() => onInvite(email, selectedPermissions)} className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold hover:opacity-90 transition-all">Finalizar e Enviar E-mail</button>
             </div>
           )}
 
@@ -312,6 +333,7 @@ export function Dashboard({ onLogout, userPin }: DashboardProps) {
   const [securityLogs, setSecurityLogs] = useState<string[]>([]);
   const [showSettings, setShowSettings] = useState(false);
   const [showExtraUserModal, setShowExtraUserModal] = useState(false);
+  const [invitedUsers, setInvitedUsers] = useState<InvitedUser[]>([]);
 
   const showToast = (message: string) => {
     const id = Math.random().toString(36).substr(2, 9);
@@ -382,6 +404,12 @@ export function Dashboard({ onLogout, userPin }: DashboardProps) {
   const handleFileAttach = () => {
     setSecurityLogs(prev => [`${new Date().toLocaleTimeString()} - 📁 Arquivo pronto para sincronia`, ...prev]);
     showToast('Anexo detectado!');
+  };
+
+  const handleInviteUser = (email: string, permissions: string[]) => {
+    setInvitedUsers(prev => [...prev, { email, permissions }]);
+    showToast(`📩 Convite enviado para ${email}!`);
+    setShowExtraUserModal(false);
   };
 
   // Sync logic when coming online
@@ -557,7 +585,7 @@ export function Dashboard({ onLogout, userPin }: DashboardProps) {
 
       {showAddModal && <ModalGravacao onClose={() => setShowAddModal(false)} onSave={handleAddItem} onFileAttach={handleFileAttach} />}
       {showSupport && <ModalSuporte onClose={() => setShowSupport(false)} message={message} setMessage={setMessage} onSend={handleSendSupport} />}
-      {showExtraUserModal && <ModalExtraUser onClose={() => setShowExtraUserModal(false)} categories={categories} />}
+      {showExtraUserModal && <ModalExtraUser onClose={() => setShowExtraUserModal(false)} categories={categories} onInvite={handleInviteUser} invitedUsers={invitedUsers} />}
 
       {/* Toasts */}
       <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[80] flex flex-col gap-2">
