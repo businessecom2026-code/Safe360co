@@ -106,7 +106,8 @@ const ModalSuporte = ({ onClose, message, setMessage, onSend }: { onClose: () =>
 };
 
 const ModalExtraUser = ({ onClose, categories }: { onClose: () => void, categories: Category[] }) => {
-  const [step, setStep] = useState('start'); // 'start', 'checkout', 'confirmed'
+  const [step, setStep] = useState<'start' | 'checkout' | 'confirmed' | 'success'>('start');
+  const [inviteLink, setInviteLink] = useState('');
   const [email, setEmail] = useState('');
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
 
@@ -203,8 +204,36 @@ const ModalExtraUser = ({ onClose, categories }: { onClose: () => void, categori
                   placeholder="email@exemplo.com"
                   className="flex-grow w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-blue-500 outline-none"
                 />
-                <button onClick={() => { alert(`Convite enviado para ${email} com acesso a ${selectedPermissions.length} cofres!`); onClose(); }} disabled={!isInviteReady} className="py-3 px-5 bg-blue-600 text-white rounded-xl font-bold disabled:opacity-50 transition-opacity">Convidar</button>
+                <button onClick={() => { 
+                  const uniqueId = Math.random().toString(36).substring(2, 8);
+                  setInviteLink(`safe360.co/invite/${uniqueId}`);
+                  setStep('success'); 
+                }} disabled={!isInviteReady} className="py-3 px-5 bg-blue-600 text-white rounded-xl font-bold disabled:opacity-50 transition-opacity">Convidar</button>
               </div>
+            </div>
+          )}
+
+          {step === 'success' && (
+            <div className="text-center">
+              <h3 className="text-lg font-bold mb-2 text-emerald-500">✅ Usuário criado com sucesso!</h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">Envie o link abaixo para o convidado.</p>
+              
+              <div className="bg-slate-100 dark:bg-slate-800 p-3 rounded-lg mb-4">
+                <p className="text-sm font-mono text-blue-500">{inviteLink}</p>
+              </div>
+
+              <button 
+                onClick={() => navigator.clipboard.writeText(inviteLink).then(() => alert('Link copiado!'))} 
+                className="w-full py-3 bg-emerald-600 text-white rounded-xl font-bold mb-4 hover:bg-emerald-700 transition-all">
+                Copiar Link para enviar no WhatsApp
+              </button>
+
+              <div className="text-left text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/50 p-3 rounded-lg mb-6">
+                <p className="font-bold mb-1">Instruções para o Convidado:</p>
+                <p>O convidado precisará definir o próprio PIN de acesso aos cofres permitidos: <span className="font-semibold">{categories.filter(c => selectedPermissions.includes(c.id)).map(c => c.name).join(', ')}</span>.</p>
+              </div>
+
+              <button onClick={onClose} className="w-full py-3 bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-xl font-bold hover:opacity-90 transition-all">Fechar</button>
             </div>
           )}
 
