@@ -1,10 +1,14 @@
 import { ArrowRight, CheckCircle2 } from 'lucide-react';
+import { Language, translations } from '../translations';
 
 interface HeroProps {
   onStart: () => void;
+  lang: Language;
 }
 
-export function Hero({ onStart }: HeroProps) {
+export function Hero({ onStart, lang }: HeroProps) {
+  const t = translations[lang];
+
   return (
     <section className="relative pt-20 pb-32 overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
@@ -14,15 +18,15 @@ export function Hero({ onStart }: HeroProps) {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
             </span>
-            Nova Versão 2.0 Disponível
+            Safe360 v2.0
           </div>
           
           <h1 className="text-5xl md:text-6xl font-bold tracking-tight text-gray-900 dark:text-white mb-8">
-            Segurança total para o seu <span className="text-blue-600 dark:text-blue-400">E-commerce</span>
+            {t.hero.title}
           </h1>
           
           <p className="text-xl text-gray-600 dark:text-gray-300 mb-10 leading-relaxed">
-            Proteja seus dados e de seus clientes com a plataforma mais avançada de conformidade e segurança digital. Simples, rápido e seguro.
+            {t.hero.subtitle}
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -30,7 +34,7 @@ export function Hero({ onStart }: HeroProps) {
               onClick={onStart}
               className="inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-xl text-lg font-semibold transition-all hover:scale-105 shadow-lg shadow-blue-600/20"
             >
-              Começar Agora
+              {t.hero.cta}
               <ArrowRight size={20} />
             </button>
           </div>
@@ -38,15 +42,7 @@ export function Hero({ onStart }: HeroProps) {
           <div className="mt-12 flex items-center justify-center gap-8 text-sm text-gray-500 dark:text-gray-400">
             <div className="flex items-center gap-2">
               <CheckCircle2 size={16} className="text-green-500" />
-              <span>Setup em 5 min</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <CheckCircle2 size={16} className="text-green-500" />
-              <span>Pagamento via cartão</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <CheckCircle2 size={16} className="text-green-500" />
-              <span>Cancelamento grátis</span>
+              <span>{t.hero.trust}</span>
             </div>
           </div>
         </div>

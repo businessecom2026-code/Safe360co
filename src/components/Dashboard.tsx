@@ -1,10 +1,15 @@
-import { ShieldCheck, LogOut, Plus, Wifi, WifiOff, X, Trash2, Landmark, Share2, FolderPlus, Save, Users, CreditCard, Check, Cloud, CloudOff, RefreshCw, Paperclip, Image as ImageIcon, FileText, UploadCloud, Eye, Download, Lock, ArrowLeft, Delete } from 'lucide-react';
-import { useState, useEffect, useRef, ChangeEvent, DragEvent } from 'react';
+import { ShieldCheck, LogOut, Plus, Wifi, WifiOff, X, Trash2, Landmark, Share2, FolderPlus, Save, Users, CreditCard, Check, Cloud, CloudOff, RefreshCw, Paperclip, Image as ImageIcon, FileText, UploadCloud, Eye, Download, Lock, ArrowLeft, Delete, Key, Copy, Globe, FileJson, HelpCircle, Send } from 'lucide-react';
+import { useState, useEffect, useRef, ChangeEvent, DragEvent, MouseEvent } from 'react';
 import { ThemeToggle } from './ThemeToggle';
+import { Language, translations } from '../translations';
 
 interface DashboardProps {
   onLogout: () => void;
   userPin: string;
+  masterKey: string;
+  initialRecoveryLog?: boolean;
+  lang: Language;
+  setLang: (lang: Language) => void;
 }
 
 interface Category {
@@ -44,15 +49,36 @@ interface ActivityLog {
   timestamp: Date;
 }
 
-export function Dashboard({ onLogout, userPin }: DashboardProps) {
+export function Dashboard({ onLogout, userPin, masterKey, initialRecoveryLog, lang, setLang }: DashboardProps) {
+  const t = translations[lang];
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [userPlan, setUserPlan] = useState<'FREE' | 'PRO' | 'SCALE'>('PRO'); // Default to PRO for demo
   const [storageUsed, setStorageUsed] = useState(12); // MB
   const [storageLimit, setStorageLimit] = useState(200); // MB
-  const [activities, setActivities] = useState<ActivityLog[]>([]);
+  const [activities, setActivities] = useState<ActivityLog[]>(() => {
+    const initialLogs: ActivityLog[] = [
+      {
+        id: 'biometric-log',
+        action: 'save',
+        itemName: t.dashboard.activity.biometricSuccess,
+        timestamp: new Date()
+      }
+    ];
+
+    if (initialRecoveryLog) {
+      initialLogs.unshift({
+        id: 'recovery-log',
+        action: 'save',
+        itemName: t.dashboard.activity.recoveryStarted,
+        timestamp: new Date()
+      });
+    }
+
+    return initialLogs;
+  });
   const [categories, setCategories] = useState<Category[]>([
-    { id: '1', name: 'Bancos', icon: 'bank', isFixed: true, color: 'bg-blue-500' },
-    { id: '2', name: 'Social', icon: 'social', isFixed: true, color: 'bg-purple-500' },
+    { id: '1', name: lang === 'pt' ? 'Bancos' : lang === 'en' ? 'Banks' : 'Bancos', icon: 'bank', isFixed: true, color: 'bg-blue-500' },
+    { id: '2', name: lang === 'pt' ? 'Social' : lang === 'en' ? 'Social' : 'Social', icon: 'social', isFixed: true, color: 'bg-purple-500' },
   ]);
   const [items, setItems] = useState<SavedItem[]>([]);
   const [showAddCategory, setShowAddCategory] = useState(false);
@@ -78,6 +104,71 @@ export function Dashboard({ onLogout, userPin }: DashboardProps) {
   const [newItemFile, setNewItemFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Toast State
+  const [toasts, setToasts] = useState<{ id: string; message: string }[]>([]);
+
+  // Support State
+  const [showSupportModal, setShowSupportModal] = useState(false);
+  const [supportMessage, setSupportMessage] = useState('');
+  const [isSendingSupport, setIsSendingSupport] = useState(false);
+
+  const showToast = (message: string) => {
+    const id = Math.random().toString(36).substr(2, 9);
+    setToasts(prev => [...prev, { id, message }]);
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== id));
+    }, 3000);
+  };
+
+  const handleExportData = () => {
+    const dataToExport = {
+      user: 'Safe360 User',
+      exportDate: new Date().toISOString(),
+      categories: categories.map(c => ({
+        name: c.name,
+        items: items.filter(i => i.categoryId === c.id).map(i => ({
+          title: i.title,
+          description: i.description,
+          timestamp: i.timestamp,
+          attachment: i.attachment ? {
+            name: i.attachment.name,
+            type: i.attachment.type,
+            url: i.attachment.url
+          } : null
+        }))
+      }))
+    };
+
+    const blob = new Blob([JSON.stringify(dataToExport, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `safe360-backup-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    setActivities(prev => [{
+      id: Math.random().toString(),
+      action: 'save',
+      itemName: t.dashboard.activity.exportDone,
+      timestamp: new Date()
+    }, ...prev]);
+
+    showToast(t.dashboard.toasts.saved);
+  };
+
+  const handleLanguageChange = (newLang: Language) => {
+    setLang(newLang);
+    setActivities(prev => [{
+      id: Math.random().toString(),
+      action: 'save',
+      itemName: t.dashboard.activity.langChanged.replace('{lang}', newLang.toUpperCase()),
+      timestamp: new Date()
+    }, ...prev]);
+  };
+
   // Item Detail State
   const [selectedItem, setSelectedItem] = useState<SavedItem | null>(null);
 
@@ -88,6 +179,13 @@ export function Dashboard({ onLogout, userPin }: DashboardProps) {
   const [newGuestEmail, setNewGuestEmail] = useState('');
   const [isPaymentProcessing, setIsPaymentProcessing] = useState(false);
   const [showEmailInput, setShowEmailInput] = useState(false);
+
+  // Security Settings State
+  const [showSecuritySettings, setShowSecuritySettings] = useState(false);
+  const [showMasterKey, setShowMasterKey] = useState(false);
+  const [securityPin, setSecurityPin] = useState('');
+  const [securityError, setSecurityError] = useState('');
+  const [autoLockEnabled, setAutoLockEnabled] = useState(true);
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -119,6 +217,20 @@ export function Dashboard({ onLogout, userPin }: DashboardProps) {
     }
   }, [isOnline, items]);
 
+  // Periodic Sync Simulation (every 30 seconds)
+  useEffect(() => {
+    if (!isOnline) return;
+
+    const interval = setInterval(() => {
+      setIsSyncing(true);
+      setTimeout(() => {
+        setIsSyncing(false);
+      }, 2000);
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [isOnline]);
+
   const handleSyncNow = () => {
     if (!isOnline || isSyncing) return;
     setIsSyncing(true);
@@ -128,6 +240,7 @@ export function Dashboard({ onLogout, userPin }: DashboardProps) {
         item.syncStatus === 'pending' ? { ...item, syncStatus: 'synced' } : item
       ));
       setIsSyncing(false);
+      showToast(t.dashboard.toasts.synced);
     }, 2000);
   };
 
@@ -145,6 +258,14 @@ export function Dashboard({ onLogout, userPin }: DashboardProps) {
       ]);
       setNewCategoryName('');
       setShowAddCategory(false);
+      
+      // Add Activity Log
+      setActivities(prev => [{
+        id: Date.now().toString(),
+        action: 'save',
+        itemName: t.dashboard.activity.folderCreated.replace('{name}', newCategoryName),
+        timestamp: new Date()
+      }, ...prev]);
     }
   };
 
@@ -160,7 +281,7 @@ export function Dashboard({ onLogout, userPin }: DashboardProps) {
     setSelectedCategory(category);
   };
 
-  const handleDeleteItemRequest = (itemId: string, e: React.MouseEvent) => {
+  const handleDeleteItemRequest = (itemId: string, e: MouseEvent) => {
     e.stopPropagation();
     setDeleteType('item');
     setIdToDelete(itemId);
@@ -179,11 +300,12 @@ export function Dashboard({ onLogout, userPin }: DashboardProps) {
           setActivities(prev => [{
             id: Date.now().toString(),
             action: 'delete',
-            itemName: item.title,
+            itemName: t.dashboard.activity.deleted.replace('{name}', item.title),
             timestamp: new Date()
           }, ...prev]);
           // Simulate storage decrease
           setStorageUsed(prev => Math.max(prev - (item.attachment ? 2.5 : 0.5), 0));
+          showToast(t.dashboard.toasts.deleted);
         }
       } else if (deleteType === 'category' && idToDelete) {
         const category = categories.find(c => c.id === idToDelete);
@@ -198,9 +320,10 @@ export function Dashboard({ onLogout, userPin }: DashboardProps) {
           setActivities(prev => [{
             id: Date.now().toString(),
             action: 'delete',
-            itemName: `Categoria: ${category.name}`,
+            itemName: t.dashboard.activity.folderDeleted.replace('{name}', category.name),
             timestamp: new Date()
           }, ...prev]);
+          showToast(t.dashboard.toasts.deleted);
         }
       }
       
@@ -210,7 +333,24 @@ export function Dashboard({ onLogout, userPin }: DashboardProps) {
       // Close detail modal if open
       setSelectedItem(null);
     } else {
-      setDeleteError('❌ Ação negada. PIN incorreto');
+      setDeleteError(t.dashboard.security.masterKey.error);
+      
+      // Add Activity Log for failed attempt
+      let targetName = lang === 'pt' ? 'Item desconhecido' : lang === 'en' ? 'Unknown item' : 'Elemento desconocido';
+      if (deleteType === 'item') {
+        const item = items.find(i => i.id === idToDelete);
+        if (item) targetName = item.title;
+      } else if (deleteType === 'category') {
+        const category = categories.find(c => c.id === idToDelete);
+        if (category) targetName = (lang === 'pt' ? 'Pasta ' : lang === 'en' ? 'Folder ' : 'Carpeta ') + category.name;
+      }
+
+      setActivities(prev => [{
+        id: Date.now().toString(),
+        action: 'delete',
+        itemName: (lang === 'pt' ? '🔐 Tentativa de exclusão em ' : lang === 'en' ? '🔐 Deletion attempt in ' : '🔐 Intento de eliminación en ') + targetName,
+        timestamp: new Date()
+      }, ...prev]);
     }
   };
 
@@ -272,12 +412,14 @@ export function Dashboard({ onLogout, userPin }: DashboardProps) {
     setActivities(prev => [{
       id: Date.now().toString(),
       action: 'save',
-      itemName: newItemTitle,
+      itemName: t.dashboard.activity.sync.replace('{name}', newItemTitle),
       timestamp: new Date()
     }, ...prev]);
 
     // Simulate storage increase (0.5MB per item, 2MB per attachment)
     setStorageUsed(prev => Math.min(prev + (attachment ? 2.5 : 0.5), storageLimit));
+    
+    showToast(t.dashboard.toasts.saved);
 
     setShowAddItemModal(false);
   };
@@ -338,6 +480,19 @@ export function Dashboard({ onLogout, userPin }: DashboardProps) {
           </div>
           
           <div className="flex items-center gap-4">
+            <div className="hidden md:flex items-center gap-2 bg-gray-100 dark:bg-slate-800 rounded-lg p-1 border border-gray-200 dark:border-slate-700">
+              <Globe size={14} className="text-gray-500 ml-1" />
+              <select 
+                value={lang}
+                onChange={(e) => handleLanguageChange(e.target.value as Language)}
+                className="bg-transparent text-[10px] font-bold text-gray-700 dark:text-gray-300 outline-none cursor-pointer pr-1 uppercase"
+              >
+                <option value="pt">PT</option>
+                <option value="en">EN</option>
+                <option value="es">ES</option>
+              </select>
+            </div>
+
             <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors duration-300 ${
               isOnline 
                 ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-900/30' 
@@ -345,7 +500,7 @@ export function Dashboard({ onLogout, userPin }: DashboardProps) {
             }`}>
               {isOnline ? <Wifi size={14} /> : <WifiOff size={14} />}
               <span className="hidden sm:inline">
-                {isOnline ? 'Online' : 'Offline'}
+                {isOnline ? t.dashboard.nav.online : t.dashboard.nav.offline}
               </span>
             </div>
 
@@ -359,15 +514,31 @@ export function Dashboard({ onLogout, userPin }: DashboardProps) {
               }`}
             >
               <RefreshCw size={14} className={isSyncing ? "animate-spin" : ""} />
-              <span className="hidden sm:inline">{isSyncing ? 'Sincronizando...' : 'Sincronizar Agora'}</span>
+              <span className="hidden sm:inline">{isSyncing ? t.dashboard.nav.syncing : t.dashboard.nav.syncNow}</span>
             </button>
             
             <button
               onClick={() => setShowAccessModal(true)}
               className="p-2 text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
-              title="Gerenciar Acessos"
+              title={t.dashboard.nav.access}
             >
               <Users size={20} />
+            </button>
+
+            <button 
+              onClick={() => setShowSecuritySettings(true)}
+              className="p-2 text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
+              title={t.dashboard.nav.security}
+            >
+              <ShieldCheck size={20} />
+            </button>
+
+            <button 
+              onClick={() => setShowSupportModal(true)}
+              className="p-2 text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
+              title={t.dashboard.support.title}
+            >
+              <HelpCircle size={20} />
             </button>
 
             <ThemeToggle />
@@ -375,7 +546,7 @@ export function Dashboard({ onLogout, userPin }: DashboardProps) {
             <button 
               onClick={onLogout}
               className="p-2 text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400 transition-colors"
-              title="Sair"
+              title={t.dashboard.nav.logout}
             >
               <LogOut size={20} />
             </button>
@@ -392,7 +563,7 @@ export function Dashboard({ onLogout, userPin }: DashboardProps) {
               className="flex items-center gap-2 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white mb-6 transition-colors"
             >
               <ArrowLeft size={20} />
-              <span>Voltar</span>
+              <span>{lang === 'pt' ? 'Voltar' : lang === 'en' ? 'Back' : 'Volver'}</span>
             </button>
 
             <div className="flex items-center gap-4 mb-8">
@@ -419,7 +590,7 @@ export function Dashboard({ onLogout, userPin }: DashboardProps) {
                           <div className="flex items-center gap-2 mb-1">
                             <p className="font-bold text-gray-900 dark:text-white text-lg truncate">{item.title}</p>
                             {item.attachment && (
-                              <span className="text-gray-400 dark:text-gray-500 flex-shrink-0" title="Tem anexo">
+                              <span className="text-gray-400 dark:text-gray-500 flex-shrink-0" title={t.dashboard.itemDetail.attachment}>
                                 {item.attachment.type === 'image' ? <ImageIcon size={16} /> : <Paperclip size={16} />}
                               </span>
                             )}
@@ -438,13 +609,13 @@ export function Dashboard({ onLogout, userPin }: DashboardProps) {
                       <div className="flex items-center gap-3 flex-shrink-0 ml-4 mt-1">
                         <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-gray-400 text-xs font-medium">
                           {item.syncStatus === 'synced' ? <Cloud size={12} /> : <CloudOff size={12} />}
-                          <span className="hidden sm:inline">{item.syncStatus === 'synced' ? 'Sincronizado' : 'Aguardando'}</span>
+                          <span className="hidden sm:inline">{item.syncStatus === 'synced' ? t.dashboard.items.synced : t.dashboard.items.pending}</span>
                         </div>
                         
                         <button
                           onClick={(e) => handleDeleteItemRequest(item.id, e)}
                           className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
-                          title="Deletar Item"
+                          title={t.dashboard.items.delete}
                         >
                           <Trash2 size={18} />
                         </button>
@@ -458,25 +629,29 @@ export function Dashboard({ onLogout, userPin }: DashboardProps) {
                 <div className="w-16 h-16 bg-gray-100 dark:bg-slate-800 rounded-full flex items-center justify-center text-gray-400 mb-4">
                   <FolderPlus size={32} />
                 </div>
-                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-1">Esta categoria está vazia</h3>
-                <p className="text-gray-500 dark:text-gray-400 text-sm">Use o botão + para adicionar novos itens aqui.</p>
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-1">{t.dashboard.categories.empty}</h3>
+                <p className="text-gray-500 dark:text-gray-400 text-sm">{t.dashboard.categories.emptySub}</p>
               </div>
             )}
           </div>
         ) : (
-          <>
+          <div className="animate-in fade-in slide-in-from-left-4 duration-300">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Minhas Categorias</h1>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t.dashboard.categories.title}</h1>
               
               {/* Storage Bar */}
               <div className="bg-white dark:bg-slate-800 rounded-xl p-3 shadow-sm border border-gray-100 dark:border-slate-700 w-full sm:w-64">
                 <div className="flex justify-between text-xs mb-1.5">
-                  <span className="text-gray-500 dark:text-gray-400 font-medium">Armazenamento</span>
-                  <span className="text-gray-900 dark:text-white font-bold">{storageUsed.toFixed(1)}MB <span className="text-gray-400 font-normal">de {storageLimit}MB</span></span>
+                  <span className="text-gray-500 dark:text-gray-400 font-medium">{t.dashboard.storage.label}</span>
+                  <span className="text-gray-900 dark:text-white font-bold">{storageUsed.toFixed(1)}MB <span className="text-gray-400 font-normal">{t.dashboard.storage.of} {storageLimit}MB</span></span>
                 </div>
                 <div className="w-full bg-gray-100 dark:bg-slate-700 rounded-full h-2 overflow-hidden">
                   <div 
-                    className="bg-gradient-to-r from-blue-500 to-purple-500 h-full rounded-full transition-all duration-500 ease-out"
+                    className={`h-full rounded-full transition-all duration-500 ease-out ${
+                      (storageUsed / storageLimit) >= 0.9 
+                        ? 'bg-orange-500' 
+                        : 'bg-gradient-to-r from-blue-500 to-purple-500'
+                    }`}
                     style={{ width: `${(storageUsed / storageLimit) * 100}%` }}
                   />
                 </div>
@@ -494,7 +669,9 @@ export function Dashboard({ onLogout, userPin }: DashboardProps) {
                   <div className={`w-16 h-16 rounded-2xl ${category.color} flex items-center justify-center mb-3 shadow-lg shadow-blue-900/5`}>
                     {getIcon(category.icon)}
                   </div>
-                  <span className="font-medium text-gray-900 dark:text-white text-center">{category.name}</span>
+                  <span className="font-medium text-gray-900 dark:text-white text-center">
+                    {category.isFixed ? (category.id === '1' ? t.dashboard.categories.banks : t.dashboard.categories.social) : category.name}
+                  </span>
                   
                   {!category.isFixed && (
                     <button
@@ -516,14 +693,14 @@ export function Dashboard({ onLogout, userPin }: DashboardProps) {
                 className="aspect-square bg-gray-50 dark:bg-slate-800/50 rounded-2xl border-2 border-dashed border-gray-300 dark:border-slate-700 flex flex-col items-center justify-center p-4 text-gray-500 dark:text-gray-400 hover:border-blue-500 hover:text-blue-500 dark:hover:border-blue-400 dark:hover:text-blue-400 transition-all active:scale-95"
               >
                 <Plus size={32} className="mb-2" />
-                <span className="font-medium">Nova Categoria</span>
+                <span className="font-medium">{t.dashboard.categories.new}</span>
               </button>
             </div>
 
             {/* Recent Items List (Only show if not in category view) */}
             {items.length > 0 && (
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 mb-12">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Itens Recentes</h2>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">{t.dashboard.items.recent}</h2>
                 <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700 overflow-hidden">
                   <div className="divide-y divide-gray-100 dark:divide-slate-700">
                     {items.slice(0, 5).map((item) => (
@@ -540,7 +717,7 @@ export function Dashboard({ onLogout, userPin }: DashboardProps) {
                             <div className="flex items-center gap-2">
                               <p className="font-medium text-gray-900 dark:text-white">{item.title}</p>
                               {item.attachment && (
-                                <span className="text-gray-400 dark:text-gray-500" title="Tem anexo">
+                                <span className="text-gray-400 dark:text-gray-500" title={t.dashboard.itemDetail.attachment}>
                                   {item.attachment.type === 'image' ? <ImageIcon size={14} /> : <Paperclip size={14} />}
                                 </span>
                               )}
@@ -555,18 +732,18 @@ export function Dashboard({ onLogout, userPin }: DashboardProps) {
                           {item.syncStatus === 'synced' ? (
                             <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 text-xs font-medium">
                               <Cloud size={12} />
-                              <span className="hidden sm:inline">Sincronizado</span>
+                              <span className="hidden sm:inline">{t.dashboard.nav.online}</span>
                             </div>
                           ) : (
                             <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400 text-xs font-medium">
                               <CloudOff size={12} />
-                              <span className="hidden sm:inline">Aguardando</span>
+                              <span className="hidden sm:inline">{t.dashboard.nav.offline}</span>
                             </div>
                           )}
                           <button
                             onClick={(e) => handleDeleteItemRequest(item.id, e)}
                             className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
-                            title="Deletar Item"
+                            title={t.dashboard.items.delete}
                           >
                             <Trash2 size={18} />
                           </button>
@@ -581,7 +758,7 @@ export function Dashboard({ onLogout, userPin }: DashboardProps) {
             {/* Recent Activity Log */}
             {activities.length > 0 && (
               <div className="animate-in fade-in slide-in-from-bottom-8 duration-700">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Atividade Recente</h2>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">{t.dashboard.activity.title}</h2>
                 <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700 overflow-hidden">
                   <div className="divide-y divide-gray-100 dark:divide-slate-700">
                     {activities.slice(0, 5).map((log) => (
@@ -595,10 +772,10 @@ export function Dashboard({ onLogout, userPin }: DashboardProps) {
                         </div>
                         <div className="flex-1">
                           <p className="text-sm font-medium text-gray-900 dark:text-white">
-                            {log.action === 'save' ? 'Salvou' : 'Deletou'} <span className="font-bold">{log.itemName}</span>
+                            {log.itemName}
                           </p>
                           <p className="text-xs text-gray-500 dark:text-gray-400">
-                            {log.timestamp.toLocaleDateString()} às {log.timestamp.toLocaleTimeString()}
+                            {log.timestamp.toLocaleDateString()} {t.dashboard.activity.at} {log.timestamp.toLocaleTimeString()}
                           </p>
                         </div>
                       </div>
@@ -607,7 +784,7 @@ export function Dashboard({ onLogout, userPin }: DashboardProps) {
                 </div>
               </div>
             )}
-          </>
+          </div>
         )}
       </div>
 
@@ -629,7 +806,7 @@ export function Dashboard({ onLogout, userPin }: DashboardProps) {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex justify-between items-center mb-6">
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white">O que deseja salvar?</h3>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white">{t.dashboard.fab.question}</h3>
               <button onClick={() => setShowFabMenu(false)} className="text-gray-500 hover:text-gray-700 dark:text-gray-400">
                 <X size={20} />
               </button>
@@ -655,12 +832,157 @@ export function Dashboard({ onLogout, userPin }: DashboardProps) {
         </div>
       )}
 
+      {/* Security Settings Modal */}
+      {showSecuritySettings && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-300">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl border border-gray-100 dark:border-slate-800">
+            <div className="p-6 border-b border-gray-100 dark:border-slate-800 flex justify-between items-center bg-gray-50/50 dark:bg-slate-800/50">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white">
+                  <ShieldCheck size={24} />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white">{t.dashboard.nav.security}</h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{t.dashboard.security.subtitle}</p>
+                </div>
+              </div>
+              <button onClick={() => {
+                setShowSecuritySettings(false);
+                setShowMasterKey(false);
+                setSecurityPin('');
+                setSecurityError('');
+              }} className="text-gray-400 hover:text-gray-600 dark:hover:text-white transition-colors">
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6">
+              {/* Export Data Button */}
+              <div className="p-4 rounded-2xl bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/30">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center">
+                      <FileJson size={18} />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-gray-900 dark:text-white">{t.dashboard.security.export.title}</p>
+                      <p className="text-[10px] text-gray-500 dark:text-gray-400">{t.dashboard.security.export.subtitle}</p>
+                    </div>
+                  </div>
+                </div>
+                <button 
+                  onClick={handleExportData}
+                  className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-sm"
+                >
+                  <Download size={14} />
+                  {t.dashboard.security.export.button}
+                </button>
+              </div>
+
+              {/* Auto Lock Toggle */}
+              <div className="flex items-center justify-between p-4 rounded-2xl bg-gray-50 dark:bg-slate-800/50 border border-gray-100 dark:border-slate-800">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 flex items-center justify-center">
+                    <Lock size={18} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white">{t.dashboard.security.autoLock.title}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{t.dashboard.security.autoLock.subtitle}</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setAutoLockEnabled(!autoLockEnabled)}
+                  className={`w-12 h-6 rounded-full transition-colors relative ${autoLockEnabled ? 'bg-blue-600' : 'bg-gray-300 dark:bg-slate-700'}`}
+                >
+                  <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${autoLockEnabled ? 'left-7' : 'left-1'}`} />
+                </button>
+              </div>
+
+              {/* Master Key Section */}
+              <div className="space-y-4">
+                <h4 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                  <Key size={16} className="text-blue-600" />
+                  {t.dashboard.security.masterKey.title}
+                </h4>
+                
+                {!showMasterKey ? (
+                  <div className="p-6 rounded-2xl border-2 border-dashed border-gray-200 dark:border-slate-800 text-center space-y-4">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {t.dashboard.security.masterKey.confirmPin}
+                    </p>
+                    <div className="flex justify-center gap-2">
+                      <input
+                        type="password"
+                        maxLength={8}
+                        value={securityPin}
+                        onChange={(e) => setSecurityPin(e.target.value)}
+                        placeholder={t.dashboard.security.masterKey.placeholder}
+                        className="w-32 px-4 py-2 rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-center text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                      <button
+                        onClick={() => {
+                          if (securityPin === userPin) {
+                            setShowMasterKey(true);
+                            setSecurityError('');
+                          } else {
+                            setSecurityError(t.dashboard.security.masterKey.error);
+                          }
+                        }}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors"
+                      >
+                        {t.dashboard.security.masterKey.showButton}
+                      </button>
+                    </div>
+                    {securityError && <p className="text-red-500 text-xs font-medium">{securityError}</p>}
+                  </div>
+                ) : (
+                  <div className="animate-in zoom-in duration-300">
+                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/30 rounded-2xl p-6 text-center space-y-3">
+                      <p className="text-[10px] text-blue-600 dark:text-blue-400 uppercase tracking-widest font-bold">{t.dashboard.security.masterKey.label}</p>
+                      <code className="text-2xl font-mono font-bold text-gray-900 dark:text-white tracking-wider block">
+                        {masterKey}
+                      </code>
+                      <button 
+                        onClick={() => {
+                          navigator.clipboard.writeText(masterKey);
+                          showToast(t.dashboard.toasts.copied);
+                        }}
+                        className="text-xs text-blue-600 dark:text-blue-400 font-medium hover:underline flex items-center justify-center gap-1 mx-auto"
+                      >
+                        <Copy size={12} /> {t.dashboard.security.masterKey.copy}
+                      </button>
+                    </div>
+                    <p className="mt-4 text-[11px] text-gray-500 dark:text-gray-400 text-center leading-relaxed">
+                      {t.dashboard.security.masterKey.warning}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="p-6 bg-gray-50 dark:bg-slate-800/50 border-t border-gray-100 dark:border-slate-800">
+              <button 
+                onClick={() => {
+                  setShowSecuritySettings(false);
+                  setShowMasterKey(false);
+                  setSecurityPin('');
+                  setSecurityError('');
+                }}
+                className="w-full py-3 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-gray-300 rounded-xl font-semibold hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
+              >
+                {t.dashboard.security.close}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Add Item Modal */}
       {showAddItemModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
           <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-md p-6 shadow-xl">
             <div className="flex justify-between items-center mb-6">
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white">Nova Gravação</h3>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white">{t.dashboard.addItem.title}</h3>
               <button onClick={() => setShowAddItemModal(false)} className="text-gray-500 hover:text-gray-700 dark:text-gray-400">
                 <X size={20} />
               </button>
@@ -668,29 +990,29 @@ export function Dashboard({ onLogout, userPin }: DashboardProps) {
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Título</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t.dashboard.addItem.labelTitle}</label>
                 <input
                   type="text"
                   value={newItemTitle}
                   onChange={(e) => setNewItemTitle(e.target.value)}
-                  placeholder="Ex: Senha do Banco"
+                  placeholder={t.dashboard.addItem.placeholderTitle}
                   className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
                   autoFocus
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Descrição / Notas</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t.dashboard.addItem.labelDescription}</label>
                 <textarea
                   value={newItemDescription}
                   onChange={(e) => setNewItemDescription(e.target.value)}
-                  placeholder="Detalhes, login, observações..."
+                  placeholder={t.dashboard.addItem.placeholderDescription}
                   className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none resize-none h-24"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Anexo</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t.dashboard.addItem.labelAttachment}</label>
                 <div 
                   className={`relative border-2 border-dashed rounded-xl p-6 text-center transition-colors ${
                     userPlan === 'FREE' 
@@ -705,7 +1027,7 @@ export function Dashboard({ onLogout, userPin }: DashboardProps) {
                     <div className="absolute inset-0 bg-white/60 dark:bg-slate-900/60 backdrop-blur-[1px] flex flex-col items-center justify-center rounded-xl z-10">
                       <Lock className="text-gray-400 mb-2" size={24} />
                       <p className="text-xs font-medium text-gray-600 dark:text-gray-300 px-4">
-                        ☁️ Upload de arquivos disponível apenas nos planos PRO e SCALE
+                        {t.dashboard.items.freeLock}
                       </p>
                     </div>
                   )}
@@ -742,13 +1064,13 @@ export function Dashboard({ onLogout, userPin }: DashboardProps) {
                         }}
                         className="mt-2 text-xs text-red-500 hover:underline"
                       >
-                        Remover
+                        {lang === 'pt' ? 'Remover' : lang === 'en' ? 'Remove' : 'Eliminar'}
                       </button>
                     </div>
                   ) : (
                     <div className="flex flex-col items-center text-gray-500 dark:text-gray-400">
                       <UploadCloud size={32} className="mb-2" />
-                      <p className="text-sm">Clique ou arraste para enviar</p>
+                      <p className="text-sm">{t.dashboard.addItem.dropzone}</p>
                       <p className="text-xs mt-1 opacity-70">PDF, PNG, JPG</p>
                     </div>
                   )}
@@ -760,7 +1082,7 @@ export function Dashboard({ onLogout, userPin }: DashboardProps) {
                 disabled={!newItemTitle.trim()}
                 className="w-full py-4 px-4 rounded-xl bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-bold text-lg shadow-lg shadow-blue-600/20 transition-all active:scale-[0.98]"
               >
-                Salvar
+                {t.dashboard.addItem.submit}
               </button>
             </div>
           </div>
@@ -775,7 +1097,7 @@ export function Dashboard({ onLogout, userPin }: DashboardProps) {
               <div>
                 <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">{selectedItem.title}</h3>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  {selectedItem.timestamp.toLocaleDateString()} às {selectedItem.timestamp.toLocaleTimeString()}
+                  {selectedItem.timestamp.toLocaleDateString()} {lang === 'pt' ? 'às' : lang === 'en' ? 'at' : 'a las'} {selectedItem.timestamp.toLocaleTimeString()}
                 </p>
               </div>
               <button onClick={() => setSelectedItem(null)} className="text-gray-500 hover:text-gray-700 dark:text-gray-400">
@@ -827,20 +1149,20 @@ export function Dashboard({ onLogout, userPin }: DashboardProps) {
                 {selectedItem.attachment.type === 'pdf' && (
                   <div className="flex flex-col items-center justify-center py-8 bg-white dark:bg-slate-900 rounded-lg border border-gray-200 dark:border-slate-700">
                     <FileText size={48} className="text-gray-300 dark:text-slate-600 mb-2" />
-                    <p className="text-sm text-gray-500">Visualização de PDF não disponível</p>
+                    <p className="text-sm text-gray-500">{lang === 'pt' ? 'Visualização de PDF não disponível' : lang === 'en' ? 'PDF preview not available' : 'Vista previa de PDF no disponible'}</p>
                     <a 
                       href={selectedItem.attachment.url} 
                       download={selectedItem.attachment.name}
                       className="mt-4 text-sm font-medium text-blue-600 hover:underline"
                     >
-                      Baixar PDF
+                      {lang === 'pt' ? 'Baixar PDF' : lang === 'en' ? 'Download PDF' : 'Descargar PDF'}
                     </a>
                   </div>
                 )}
               </div>
             ) : (
               <div className="py-8 text-center text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-slate-800/50 rounded-xl border border-dashed border-gray-200 dark:border-slate-700">
-                <p>Nenhum anexo neste item.</p>
+                <p>{lang === 'pt' ? 'Nenhum anexo neste item.' : lang === 'en' ? 'No attachment for this item.' : 'Sin adjuntos en este elemento.'}</p>
               </div>
             )}
             
@@ -849,7 +1171,7 @@ export function Dashboard({ onLogout, userPin }: DashboardProps) {
                 onClick={() => setSelectedItem(null)}
                 className="px-4 py-2 bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors"
               >
-                Fechar
+                {lang === 'pt' ? 'Fechar' : lang === 'en' ? 'Close' : 'Cerrar'}
               </button>
             </div>
           </div>
@@ -860,12 +1182,12 @@ export function Dashboard({ onLogout, userPin }: DashboardProps) {
       {showAddCategory && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
           <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-sm p-6 shadow-xl">
-            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Nova Categoria</h3>
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">{lang === 'pt' ? 'Nova Categoria' : lang === 'en' ? 'New Category' : 'Nueva Categoría'}</h3>
             <input
               type="text"
               value={newCategoryName}
               onChange={(e) => setNewCategoryName(e.target.value)}
-              placeholder="Nome da categoria (ex: Viagens)"
+              placeholder={lang === 'pt' ? 'Nome da categoria (ex: Viagens)' : lang === 'en' ? 'Category name (ex: Travel)' : 'Nombre de la categoría (ej: Viajes)'}
               className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none mb-4"
               autoFocus
             />
@@ -874,14 +1196,14 @@ export function Dashboard({ onLogout, userPin }: DashboardProps) {
                 onClick={() => setShowAddCategory(false)}
                 className="flex-1 py-2 px-4 rounded-lg border border-gray-300 dark:border-slate-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800"
               >
-                Cancelar
+                {lang === 'pt' ? 'Cancelar' : lang === 'en' ? 'Cancel' : 'Cancelar'}
               </button>
               <button
                 onClick={handleAddCategory}
                 disabled={!newCategoryName.trim()}
                 className="flex-1 py-2 px-4 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Criar
+                {lang === 'pt' ? 'Criar' : lang === 'en' ? 'Create' : 'Crear'}
               </button>
             </div>
           </div>
@@ -898,8 +1220,8 @@ export function Dashboard({ onLogout, userPin }: DashboardProps) {
                   <Users size={24} />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-white leading-tight">Gerenciar Acessos</h3>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Controle quem visualiza seus dados</p>
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white leading-tight">{t.dashboard.nav.access}</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">{lang === 'pt' ? 'Controle quem visualiza seus dados' : lang === 'en' ? 'Control who views your data' : 'Controla quién ve tus datos'}</p>
                 </div>
               </div>
               <button 
@@ -911,11 +1233,11 @@ export function Dashboard({ onLogout, userPin }: DashboardProps) {
             </div>
 
             <div className="mb-8">
-              <h4 className="text-xs font-semibold text-gray-400 dark:text-gray-500 mb-4 uppercase tracking-wider pl-1">Usuários Convidados</h4>
+              <h4 className="text-xs font-semibold text-gray-400 dark:text-gray-500 mb-4 uppercase tracking-wider pl-1">{t.dashboard.access.guestsTitle}</h4>
               {guests.length === 0 ? (
                 <div className="text-center py-10 bg-gray-50 dark:bg-slate-800/30 rounded-2xl border border-dashed border-gray-200 dark:border-slate-700/50">
-                  <p className="text-gray-500 dark:text-gray-400 text-sm font-medium">Nenhum usuário convidado ainda.</p>
-                  <p className="text-gray-400 dark:text-gray-500 text-xs mt-1">Adicione colaboradores para compartilhar acesso.</p>
+                  <p className="text-gray-500 dark:text-gray-400 text-sm font-medium">{t.dashboard.access.noGuests}</p>
+                  <p className="text-gray-400 dark:text-gray-500 text-xs mt-1">{t.dashboard.access.noGuestsSub}</p>
                 </div>
               ) : (
                 <ul className="space-y-4 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
@@ -928,11 +1250,11 @@ export function Dashboard({ onLogout, userPin }: DashboardProps) {
                           </div>
                           <span className="text-gray-900 dark:text-white font-medium text-sm">{guest.email}</span>
                         </div>
-                        <span className="text-[10px] font-bold bg-green-100 text-green-700 dark:bg-green-500/10 dark:text-green-400 px-2.5 py-1 rounded-full uppercase tracking-wide">Ativo</span>
+                        <span className="text-[10px] font-bold bg-green-100 text-green-700 dark:bg-green-500/10 dark:text-green-400 px-2.5 py-1 rounded-full uppercase tracking-wide">{t.dashboard.access.active}</span>
                       </div>
                       
                       <div className="space-y-3 pl-11">
-                        <p className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Permissões de Acesso</p>
+                        <p className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">{t.dashboard.access.permissions}</p>
                         <div className="grid grid-cols-2 gap-2">
                           {categories.map(category => (
                             <label key={category.id} className="flex items-center gap-2.5 cursor-pointer group p-1.5 -ml-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700/50 transition-colors">
@@ -964,18 +1286,18 @@ export function Dashboard({ onLogout, userPin }: DashboardProps) {
                 className="w-full py-4 px-6 rounded-2xl bg-blue-600 text-white hover:bg-blue-700 font-semibold flex items-center justify-center gap-2.5 shadow-lg shadow-blue-600/20 hover:shadow-blue-600/30 active:scale-[0.98] transition-all"
               >
                 <Plus size={20} strokeWidth={2.5} />
-                <span>Adicionar Usuário Extra</span>
+                <span>{t.dashboard.access.addExtra}</span>
                 <span className="bg-blue-500/30 px-2 py-0.5 rounded text-xs ml-1">€ 2,00</span>
               </button>
             ) : (
               <div className="animate-in fade-in slide-in-from-bottom-4 bg-gray-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-gray-100 dark:border-slate-700/50">
-                <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wide">E-mail do Convidado</label>
+                <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wide">{t.dashboard.access.emailLabel}</label>
                 <div className="flex gap-2">
                   <input
                     type="email"
                     value={newGuestEmail}
                     onChange={(e) => setNewGuestEmail(e.target.value)}
-                    placeholder="email@exemplo.com"
+                    placeholder={t.dashboard.access.emailPlaceholder}
                     className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all placeholder:text-gray-400"
                     autoFocus
                   />
@@ -984,7 +1306,7 @@ export function Dashboard({ onLogout, userPin }: DashboardProps) {
                     disabled={!newGuestEmail.trim()}
                     className="px-5 py-2.5 rounded-xl bg-green-600 text-white hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium shadow-lg shadow-green-600/20 transition-all"
                   >
-                    Convidar
+                    {t.dashboard.access.invite}
                   </button>
                 </div>
               </div>
@@ -1022,7 +1344,7 @@ export function Dashboard({ onLogout, userPin }: DashboardProps) {
 
               <div className="space-y-4 mb-8">
                 <div className="flex justify-between items-center py-3 border-b border-gray-100 dark:border-gray-800">
-                  <span className="text-gray-500 dark:text-gray-400 text-sm">Beneficiário</span>
+                  <span className="text-gray-500 dark:text-gray-400 text-sm">{t.dashboard.payment.beneficiary}</span>
                   <div className="flex items-center gap-2">
                     <div className="w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400">
                       <ShieldCheck size={10} />
@@ -1031,8 +1353,8 @@ export function Dashboard({ onLogout, userPin }: DashboardProps) {
                   </div>
                 </div>
                 <div className="flex justify-between items-center py-3 border-b border-gray-100 dark:border-gray-800">
-                  <span className="text-gray-500 dark:text-gray-400 text-sm">Produto</span>
-                  <span className="font-medium text-gray-900 dark:text-white text-sm">Usuário Adicional</span>
+                  <span className="text-gray-500 dark:text-gray-400 text-sm">{t.dashboard.payment.product}</span>
+                  <span className="font-medium text-gray-900 dark:text-white text-sm">{t.dashboard.payment.extraUser}</span>
                 </div>
               </div>
 
@@ -1044,7 +1366,7 @@ export function Dashboard({ onLogout, userPin }: DashboardProps) {
                 {isPaymentProcessing ? (
                   <div className="w-6 h-6 border-[3px] border-white/30 border-t-white rounded-full animate-spin" />
                 ) : (
-                  'Pagar Agora'
+                  t.dashboard.payment.payNow
                 )}
               </button>
               
@@ -1052,7 +1374,7 @@ export function Dashboard({ onLogout, userPin }: DashboardProps) {
                 onClick={() => setShowPaymentModal(false)}
                 className="w-full mt-4 py-2 text-gray-400 dark:text-gray-500 text-sm font-medium hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
               >
-                Cancelar Transação
+                {t.dashboard.payment.cancel}
               </button>
             </div>
           </div>
@@ -1067,10 +1389,10 @@ export function Dashboard({ onLogout, userPin }: DashboardProps) {
                 <Trash2 size={24} />
               </div>
               <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-                {deleteType === 'category' ? 'Excluir Categoria?' : 'Excluir Item?'}
+                {deleteType === 'category' ? t.dashboard.deleteConfirm.titleCategory : t.dashboard.deleteConfirm.titleItem}
               </h3>
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                Digite seu PIN para confirmar a exclusão permanente.
+                {t.dashboard.deleteConfirm.subtitle}
               </p>
             </div>
 
@@ -1142,14 +1464,79 @@ export function Dashboard({ onLogout, userPin }: DashboardProps) {
                 }}
                 className="flex-1 py-3 px-4 rounded-xl border border-gray-300 dark:border-slate-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800 font-medium"
               >
-                Cancelar
+                {t.dashboard.deleteConfirm.cancel}
               </button>
               <button
                 onClick={handleConfirmDelete}
                 disabled={deletePin.length < 4}
                 className="flex-1 py-3 px-4 rounded-xl bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium shadow-lg shadow-red-600/20"
               >
-                Confirmar
+                {t.dashboard.deleteConfirm.confirm}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Support Modal */}
+      {showSupportModal && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[60] flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md rounded-3xl w-full max-w-md p-6 shadow-2xl border border-white/20 dark:border-slate-700/50">
+            <div className="flex justify-between items-center mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+                  <HelpCircle size={20} />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white">{t.dashboard.support.title}</h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{t.dashboard.support.subtitle}</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => {
+                  setShowSupportModal(false);
+                  setSupportMessage('');
+                }} 
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-white transition-colors"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  {t.dashboard.support.messageLabel}
+                </label>
+                <textarea
+                  value={supportMessage}
+                  onChange={(e) => setSupportMessage(e.target.value)}
+                  placeholder={t.dashboard.support.placeholder}
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-slate-700 bg-white/50 dark:bg-slate-800/50 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all resize-none h-32"
+                />
+              </div>
+
+              <button
+                onClick={() => {
+                  if (!supportMessage.trim()) return;
+                  setIsSendingSupport(true);
+                  setTimeout(() => {
+                    setIsSendingSupport(false);
+                    setShowSupportModal(false);
+                    setSupportMessage('');
+                    showToast(t.dashboard.support.success);
+                  }, 1500);
+                }}
+                disabled={!supportMessage.trim() || isSendingSupport}
+                className="w-full py-3 px-4 rounded-xl bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium shadow-lg shadow-blue-600/20 flex items-center justify-center gap-2 transition-all"
+              >
+                {isSendingSupport ? (
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <>
+                    <Send size={18} />
+                    {t.dashboard.support.send}
+                  </>
+                )}
               </button>
             </div>
           </div>

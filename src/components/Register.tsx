@@ -1,13 +1,16 @@
 import { ArrowLeft, Check, ShieldCheck } from 'lucide-react';
 import { useState, FormEvent } from 'react';
+import { Language, translations } from '../translations';
 
 interface RegisterProps {
   onBack: () => void;
   onSuccess: () => void;
   onLogin: () => void;
+  lang: Language;
 }
 
-export function Register({ onBack, onSuccess, onLogin }: RegisterProps) {
+export function Register({ onBack, onSuccess, onLogin, lang }: RegisterProps) {
+  const t = translations[lang];
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -37,28 +40,28 @@ export function Register({ onBack, onSuccess, onLogin }: RegisterProps) {
             className="flex items-center text-sm text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 mb-6 transition-colors"
           >
             <ArrowLeft size={16} className="mr-1" />
-            Voltar
+            {lang === 'pt' ? 'Voltar' : lang === 'en' ? 'Back' : 'Volver'}
           </button>
 
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 mb-4">
               <ShieldCheck size={24} />
             </div>
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Crie sua conta</h2>
-            <p className="text-gray-500 dark:text-gray-400 mt-2">Comece a proteger seu e-commerce hoje.</p>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{t.auth.register.title}</h2>
+            <p className="text-gray-500 dark:text-gray-400 mt-2">{t.auth.register.subtitle}</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
               <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Nome completo
+                {t.auth.register.name}
               </label>
               <input
                 type="text"
                 id="name"
                 required
                 className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-                placeholder="Seu nome"
+                placeholder={lang === 'pt' ? 'Seu nome' : lang === 'en' ? 'Your name' : 'Su nombre'}
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               />
@@ -66,7 +69,7 @@ export function Register({ onBack, onSuccess, onLogin }: RegisterProps) {
 
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                E-mail profissional
+                {t.auth.register.email}
               </label>
               <input
                 type="email"
@@ -81,7 +84,7 @@ export function Register({ onBack, onSuccess, onLogin }: RegisterProps) {
 
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Senha
+                {t.auth.register.password}
               </label>
               <input
                 type="password"
@@ -105,7 +108,7 @@ export function Register({ onBack, onSuccess, onLogin }: RegisterProps) {
                 />
               </div>
               <label htmlFor="lgpd" className="text-sm text-gray-500 dark:text-gray-400 cursor-pointer select-none">
-                Li e aceito os termos da GDPR (Europa) e LGPD (Brasil).
+                {lang === 'pt' ? 'Li e aceito os termos da GDPR (Europa) e LGPD (Brasil).' : lang === 'en' ? 'I have read and accept the terms of GDPR (Europe) and LGPD (Brazil).' : 'He leído y acepto los términos de GDPR (Europa) y LGPD (Brasil).'}
               </label>
             </div>
 
@@ -122,7 +125,7 @@ export function Register({ onBack, onSuccess, onLogin }: RegisterProps) {
                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               ) : (
                 <>
-                  Cadastrar
+                  {t.auth.register.submit}
                   <Check size={18} />
                 </>
               )}
@@ -132,11 +135,11 @@ export function Register({ onBack, onSuccess, onLogin }: RegisterProps) {
         
         <div className="px-8 py-4 bg-gray-50 dark:bg-slate-800/50 border-t border-gray-100 dark:border-slate-800 text-center">
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
-            Já tem uma conta? <button onClick={onLogin} className="text-blue-600 font-medium hover:underline">Fazer Login</button>
+            {t.auth.register.hasAccount} <button onClick={onLogin} className="text-blue-600 font-medium hover:underline">{t.auth.register.login}</button>
           </p>
           <div className="flex items-center justify-center gap-2 text-xs text-green-600 dark:text-green-400 mt-2">
             <div className="h-1.5 w-1.5 rounded-full bg-green-500"></div>
-            <span>Em conformidade com GDPR (EU) e LGPD (BR)</span>
+            <span>{lang === 'pt' ? 'Em conformidade com GDPR (EU) e LGPD (BR)' : lang === 'en' ? 'GDPR (EU) and LGPD (BR) compliant' : 'Cumple con GDPR (UE) y LGPD (BR)'}</span>
           </div>
         </div>
       </div>

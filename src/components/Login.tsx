@@ -1,13 +1,16 @@
-import { ArrowLeft, Lock, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, Lock } from 'lucide-react';
 import { useState, FormEvent } from 'react';
+import { Language, translations } from '../translations';
 
 interface LoginProps {
   onBack: () => void;
   onSuccess: () => void;
   onRegister: () => void;
+  lang: Language;
 }
 
-export function Login({ onBack, onSuccess, onRegister }: LoginProps) {
+export function Login({ onBack, onSuccess, onRegister, lang }: LoginProps) {
+  const t = translations[lang];
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -31,21 +34,21 @@ export function Login({ onBack, onSuccess, onRegister }: LoginProps) {
             className="flex items-center text-sm text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 mb-6 transition-colors"
           >
             <ArrowLeft size={16} className="mr-1" />
-            Voltar
+            {lang === 'pt' ? 'Voltar' : lang === 'en' ? 'Back' : 'Volver'}
           </button>
 
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 mb-4">
               <Lock size={24} />
             </div>
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Bem-vindo de volta</h2>
-            <p className="text-gray-500 dark:text-gray-400 mt-2">Acesse sua conta segura.</p>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{t.auth.login.title}</h2>
+            <p className="text-gray-500 dark:text-gray-400 mt-2">{t.auth.login.subtitle}</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                E-mail
+                {t.auth.login.email}
               </label>
               <input
                 type="email"
@@ -60,7 +63,7 @@ export function Login({ onBack, onSuccess, onRegister }: LoginProps) {
 
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Senha
+                {t.auth.login.password}
               </label>
               <input
                 type="password"
@@ -81,7 +84,7 @@ export function Login({ onBack, onSuccess, onRegister }: LoginProps) {
               {isLoading ? (
                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               ) : (
-                'Entrar'
+                t.auth.login.submit
               )}
             </button>
           </form>
@@ -89,7 +92,7 @@ export function Login({ onBack, onSuccess, onRegister }: LoginProps) {
         
         <div className="px-8 py-4 bg-gray-50 dark:bg-slate-800/50 border-t border-gray-100 dark:border-slate-800 text-center">
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            Não tem uma conta? <button onClick={onRegister} className="text-blue-600 font-medium hover:underline">Cadastre-se</button>
+            {t.auth.login.noAccount} <button onClick={onRegister} className="text-blue-600 font-medium hover:underline">{t.auth.login.register}</button>
           </p>
         </div>
       </div>
