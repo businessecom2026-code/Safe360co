@@ -497,11 +497,7 @@ export function Dashboard({ onLogout, userPin }: DashboardProps) {
             </div>
           )}
 
-          <div className="flex justify-center">
-            <button onClick={handleReset} className="text-[10px] uppercase tracking-widest text-slate-400 hover:text-red-500 flex items-center gap-1 transition-colors">
-              <Trash2 size={12} /> Limpar Cache do App
-            </button>
-          </div>
+
         </main>
       )}
 
