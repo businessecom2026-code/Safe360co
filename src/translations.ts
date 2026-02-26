@@ -21,12 +21,12 @@ export const translations = {
       },
       pro: {
         name: 'PRO',
-        price: 'R$ 19,90',
+        price: 'R$ 29,90',
         features: ['Até 500MB de gravação', 'Backup em Nuvem', 'Suporte Prioritário', 'Acesso para Convidados'],
       },
       scale: {
         name: 'SCALE',
-        price: 'R$ 49,90',
+        price: 'R$ 89,90',
         features: ['Até 2GB de gravação', 'Compartilhamento em Equipe', 'Logs de Auditoria', 'API de Integração'],
       },
       cta: 'Escolher Plano',
@@ -255,12 +255,12 @@ export const translations = {
       },
       pro: {
         name: 'PRO',
-        price: '$ 4.90',
+        price: '$ 4.99',
         features: ['Up to 500MB storage', 'Cloud Backup', 'Priority Support', 'Guest Access'],
       },
       scale: {
         name: 'SCALE',
-        price: '$ 12.90',
+        price: '$ 14.99',
         features: ['Up to 2GB storage', 'Team Sharing', 'Audit Logs', 'Integration API'],
       },
       cta: 'Choose Plan',
@@ -489,12 +489,12 @@ export const translations = {
       },
       pro: {
         name: 'PRO',
-        price: '€ 4,90',
+        price: '€ 5',
         features: ['Ítems Ilimitados', 'Copia de Seguridad en la Nube', 'Soporte Prioritario', 'Acceso para Invitados'],
       },
       scale: {
         name: 'SCALE',
-        price: '€ 12,90',
+        price: '€ 15',
         features: ['Todo en PRO', 'Compartir en Equipo', 'Registros de Auditoría', 'API de Integración'],
       },
       cta: 'Elegir Plan',

@@ -53,6 +53,7 @@ export default function App() {
         initialRecoveryLog={recoveryInitiated}
         lang={lang}
         setLang={setLang}
+        onPinChange={setUserPin}
       />
     );
   }
@@ -69,6 +70,7 @@ export default function App() {
         initialRecoveryLog={recoveryInitiated}
         lang={lang}
         setLang={setLang}
+        onPinChange={setUserPin}
       />
     );
   }

@@ -1,6 +1,7 @@
-import { ShieldCheck, LogOut, Plus, X, Landmark, Share2, HelpCircle, Send, Trash2, MessageSquare, Delete, RefreshCw, ArrowLeft, CloudUpload, Settings, UserPlus, CreditCard, User } from 'lucide-react';
+import { ShieldCheck, LogOut, Plus, X, Landmark, Share2, HelpCircle, Send, Trash2, MessageSquare, Delete, RefreshCw, ArrowLeft, CloudUpload, Settings as SettingsIcon, UserPlus, CreditCard, User } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { Language, translations } from '../translations';
+import { Settings } from './Settings';
 
 interface DashboardProps {
   onLogout: () => void;
@@ -9,6 +10,7 @@ interface DashboardProps {
   initialRecoveryLog?: boolean;
   lang: Language;
   setLang: (lang: Language) => void;
+  onPinChange: (newPin: string) => void;
 }
 
 // Modais extraídos para otimização e redução de carga no componente principal
@@ -264,15 +266,7 @@ const ModalExtraUser = ({ onClose, categories, onInvite, invitedUsers }: { onClo
   );
 };
 
-const SettingsView = ({ onBack }: { onBack: () => void }) => (
-  <main className="p-4 max-w-lg mx-auto pb-24">
-    <div className="flex items-center mb-8">
-      <button onClick={onBack} className="p-2 mr-2 text-slate-500 hover:text-blue-600"><ArrowLeft size={20} /></button>
-      <h1 className="text-2xl font-bold">Configurações</h1>
-    </div>
-    {/* O ExtraUserManager virá aqui */}
-  </main>
-);
+
 
 const CategoryView = ({ category, items, onBack, onDeleteItem }: { category: Category, items: SavedItem[], onBack: () => void, onDeleteItem: (id: string) => void }) => (
   <main className="p-4 max-w-lg mx-auto pb-24">
@@ -310,7 +304,7 @@ const CategoryView = ({ category, items, onBack, onDeleteItem }: { category: Cat
   </main>
 );
 
-export function Dashboard({ onLogout, userPin }: DashboardProps) {
+export function Dashboard({ onLogout, userPin, masterKey, initialRecoveryLog, lang, setLang, onPinChange }: DashboardProps) {
   const [showSupport, setShowSupport] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [message, setMessage] = useState('');
@@ -495,7 +489,7 @@ export function Dashboard({ onLogout, userPin }: DashboardProps) {
             <HelpCircle size={18} /> <span className="hidden sm:inline">Ajuda</span>
           </button>
           <button onClick={() => setShowSettings(true)} className="p-2 text-slate-400 hover:text-blue-500 transition-colors">
-            <Settings size={20} />
+            <SettingsIcon size={20} />
           </button>
           <button onClick={onLogout} className="p-2 text-slate-400 hover:text-red-500 transition-colors">
             <LogOut size={20} />
@@ -504,7 +498,13 @@ export function Dashboard({ onLogout, userPin }: DashboardProps) {
       </nav>
 
       {showSettings ? (
-        <SettingsView onBack={() => setShowSettings(false)} />
+        <div className="p-4">
+          <div className="flex items-center mb-8 max-w-lg mx-auto">
+            <button onClick={() => setShowSettings(false)} className="p-2 mr-2 text-slate-500 hover:text-blue-600"><ArrowLeft size={20} /></button>
+            <h1 className="text-2xl font-bold">Configurações</h1>
+          </div>
+          <Settings masterKey={masterKey} userPin={userPin} onLogout={onLogout} onPinChange={onPinChange} />
+        </div>
       ) : selectedCategory ? (
         <CategoryView 
           category={selectedCategory} 
