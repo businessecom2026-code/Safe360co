@@ -8,7 +8,13 @@ interface SettingsProps {
   onPinChange: (newPin: string) => void;
 }
 
-export function Settings({ masterKey, userPin, onLogout, onPinChange }: SettingsProps) {
+export const PRICES = {
+  extraUser: 2.00,
+  scalePlan: 19.90,
+  discount: 0.10
+};
+
+export const SettingsModal = ({ masterKey, userPin, onLogout, onPinChange }: SettingsProps) => {
   const [isDark, setIsDark] = useState(false);
   const [showPinConfirm, setShowPinConfirm] = useState(false);
   const [showMasterKey, setShowMasterKey] = useState(false);
@@ -20,16 +26,71 @@ export function Settings({ masterKey, userPin, onLogout, onPinChange }: Settings
   const [newPinInput, setNewPinInput] = useState('');
   const [confirmNewPinInput, setConfirmNewPinInput] = useState('');
   const [changePinError, setChangePinError] = useState('');
+  
+  const [pinAttempts, setPinAttempts] = useState(0);
+  const [isLocked, setIsLocked] = useState(false);
+  const [lockTimeLeft, setLockTimeLeft] = useState(0);
+  const [successMessage, setSuccessMessage] = useState('');
+
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (isLocked && lockTimeLeft > 0) {
+      timer = setInterval(() => {
+        setLockTimeLeft((prev) => prev - 1);
+      }, 1000);
+    } else if (isLocked && lockTimeLeft === 0) {
+      setIsLocked(false);
+      setPinAttempts(0);
+    }
+    return () => clearInterval(timer);
+  }, [isLocked, lockTimeLeft]);
+
+  const handleFailedAttempt = (setError: (msg: string) => void) => {
+    const newAttempts = pinAttempts + 1;
+    setPinAttempts(newAttempts);
+    if (newAttempts >= 3) {
+      setIsLocked(true);
+      setLockTimeLeft(30);
+      setError('Muitas tentativas. Tente novamente em 30s.');
+    } else {
+      setError(`PIN incorreto. Tentativas restantes: ${3 - newAttempts}`);
+    }
+  };
 
   const handleRevealMasterKey = () => {
+    if (isLocked) return;
     if (pinInput === userPin) {
       setShowPinConfirm(false);
       setShowMasterKey(true);
       setPinInput('');
       setPinError('');
+      setPinAttempts(0);
     } else {
-      setPinError('PIN incorreto. Tente novamente.');
+      handleFailedAttempt(setPinError);
       setPinInput('');
+    }
+  };
+
+  const handleVerifyCurrentPin = () => {
+    if (isLocked) return;
+    if (currentPinInput === userPin) {
+      setChangePinStep('new');
+      setChangePinError('');
+      setPinAttempts(0);
+    } else {
+      handleFailedAttempt(setChangePinError);
+      setCurrentPinInput('');
+    }
+  };
+
+  const handleSaveNewPin = () => {
+    if (newPinInput === confirmNewPinInput) {
+      onPinChange(newPinInput);
+      setSuccessMessage('PIN alterado com sucesso!');
+      setTimeout(() => setSuccessMessage(''), 3000);
+      setShowChangePin(false);
+    } else {
+      setChangePinError('Os PINs não coincidem.');
     }
   };
 
@@ -65,6 +126,11 @@ export function Settings({ masterKey, userPin, onLogout, onPinChange }: Settings
       localStorage.clear();
       window.location.reload();
     }
+  };
+
+  const handleLogout = () => {
+    sessionStorage.clear();
+    onLogout();
   };
 
   return (
@@ -113,26 +179,43 @@ export function Settings({ masterKey, userPin, onLogout, onPinChange }: Settings
           <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 px-4">Assinatura</h2>
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
             <div className="flex justify-between items-center mb-4">
-              <div>
+              <div className="w-full pr-4">
                 <p className="font-semibold">Plano Atual: <span className="text-blue-600">Básico</span></p>
-                <p className="text-sm text-slate-500">100MB de Armazenamento</p>
+                <div className="flex justify-between text-sm text-slate-500 mt-1 mb-1">
+                  <span>2MB usados</span>
+                  <span>100MB</span>
+                </div>
+                <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
+                  <div className="bg-blue-600 h-2 rounded-full" style={{ width: '2%' }}></div>
+                </div>
               </div>
-              <Gem size={24} className="text-blue-500" />
+              <Gem size={24} className="text-blue-500 flex-shrink-0" />
             </div>
             <button className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-all">
-              Upgrade para Plano SCALE (10% OFF Anual)
+              Upgrade para Plano SCALE ({PRICES.discount * 100}% OFF Anual)
             </button>
           </div>
         </div>
 
-        {/* Botão de Emergência */}
-        <div className="mt-12 px-4">
-           <button onClick={handleClearCache} className="w-full flex items-center justify-center gap-2 py-3 text-sm font-semibold text-red-600 dark:text-red-500 bg-red-500/10 hover:bg-red-500/20 rounded-xl transition-colors">
-              <AlertTriangle size={16} />
-              Limpar Cache do App
+        {/* Botões de Ação */}
+        <div className="mt-12 px-4 space-y-3">
+          <button onClick={handleLogout} className="w-full flex items-center justify-center gap-2 py-3 text-sm font-semibold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-colors">
+            <LogOut size={16} />
+            Sair da Conta
+          </button>
+          <button onClick={handleClearCache} className="w-full flex items-center justify-center gap-2 py-3 text-sm font-semibold text-red-600 dark:text-red-500 bg-red-500/10 hover:bg-red-500/20 rounded-xl transition-colors">
+            <AlertTriangle size={16} />
+            Limpar Cache do App
           </button>
         </div>
       </div>
+
+      {/* Feedback Visual de Sucesso */}
+      {successMessage && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 bg-green-500 text-white px-6 py-3 rounded-full shadow-lg font-semibold z-[70] animate-fade-in-down">
+          {successMessage}
+        </div>
+      )}
 
       {/* Modal de Confirmação de PIN */}
       {showPinConfirm && (
@@ -151,7 +234,9 @@ export function Settings({ masterKey, userPin, onLogout, onPinChange }: Settings
               {pinError && <p className="text-red-500 text-xs mb-4">{pinError}</p>}
               <div className="flex gap-2 mt-4">
                 <button onClick={() => setShowPinConfirm(false)} className="flex-1 py-3 bg-slate-100 dark:bg-slate-800 rounded-lg font-semibold">Cancelar</button>
-                <button onClick={handleRevealMasterKey} className="flex-1 py-3 bg-blue-600 text-white rounded-lg font-bold">Confirmar</button>
+                <button onClick={handleRevealMasterKey} disabled={isLocked} className={`flex-1 py-3 text-white rounded-lg font-bold ${isLocked ? 'bg-slate-400 cursor-not-allowed' : 'bg-blue-600'}`}>
+                  {isLocked ? `Aguarde ${lockTimeLeft}s` : 'Confirmar'}
+                </button>
               </div>
             </div>
           </div>
@@ -185,7 +270,9 @@ export function Settings({ masterKey, userPin, onLogout, onPinChange }: Settings
                   <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">Digite seu PIN atual para continuar.</p>
                   <input type="password" value={currentPinInput} onChange={(e) => setCurrentPinInput(e.target.value)} maxLength={8} className="w-full text-center tracking-[.5em] font-mono px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-blue-500 outline-none mb-2" />
                   {changePinError && <p className="text-red-500 text-xs mb-4">{changePinError}</p>}
-                  <button onClick={() => { if (currentPinInput === userPin) { setChangePinStep('new'); setChangePinError(''); } else { setChangePinError('PIN atual incorreto.'); } }} className="w-full py-3 bg-blue-600 text-white rounded-lg font-bold mt-4">Próximo</button>
+                  <button onClick={handleVerifyCurrentPin} disabled={isLocked} className={`w-full py-3 text-white rounded-lg font-bold mt-4 ${isLocked ? 'bg-slate-400 cursor-not-allowed' : 'bg-blue-600'}`}>
+                    {isLocked ? `Aguarde ${lockTimeLeft}s` : 'Próximo'}
+                  </button>
                 </>
               )}
               {/* Etapa 2: Inserir Novo PIN */}
@@ -202,7 +289,7 @@ export function Settings({ masterKey, userPin, onLogout, onPinChange }: Settings
                   <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">Confirme seu novo PIN.</p>
                   <input type="password" value={confirmNewPinInput} onChange={(e) => setConfirmNewPinInput(e.target.value)} maxLength={8} className="w-full text-center tracking-[.5em] font-mono px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-blue-500 outline-none mb-2" />
                   {changePinError && <p className="text-red-500 text-xs mb-4">{changePinError}</p>}
-                  <button onClick={() => { if (newPinInput === confirmNewPinInput) { onPinChange(newPinInput); alert('PIN alterado com sucesso!'); setShowChangePin(false); } else { setChangePinError('Os PINs não coincidem.'); } }} className="w-full py-3 bg-blue-600 text-white rounded-lg font-bold mt-4">Salvar Alterações</button>
+                  <button onClick={handleSaveNewPin} className="w-full py-3 bg-blue-600 text-white rounded-lg font-bold mt-4">Salvar Alterações</button>
                 </>
               )}
               <button onClick={() => setShowChangePin(false)} className="w-full py-2 text-sm text-slate-500 dark:text-slate-400 mt-2">Cancelar</button>

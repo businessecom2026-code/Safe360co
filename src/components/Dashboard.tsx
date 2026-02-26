@@ -1,7 +1,7 @@
 import { ShieldCheck, LogOut, Plus, X, Landmark, Share2, HelpCircle, Send, Trash2, MessageSquare, Delete, RefreshCw, ArrowLeft, CloudUpload, Settings as SettingsIcon, UserPlus, CreditCard, User } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { Language, translations } from '../translations';
-import { Settings } from './Settings';
+import { SettingsModal, PRICES } from './Settings';
 
 interface DashboardProps {
   onLogout: () => void;
@@ -170,7 +170,7 @@ const ModalExtraUser = ({ onClose, categories, onInvite, invitedUsers }: { onClo
                 </div>
               )}
               <button onClick={handlePurchase} className="w-full py-4 bg-blue-600 text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-blue-700 transition-all">
-                <UserPlus size={20} /> Comprar Slot Extra (€ 2,00)
+                <UserPlus size={20} /> Comprar Slot Extra (€ {PRICES.extraUser.toFixed(2).replace('.', ',')})
               </button>
             </div>
           )}
@@ -503,7 +503,7 @@ export function Dashboard({ onLogout, userPin, masterKey, initialRecoveryLog, la
             <button onClick={() => setShowSettings(false)} className="p-2 mr-2 text-slate-500 hover:text-blue-600"><ArrowLeft size={20} /></button>
             <h1 className="text-2xl font-bold">Configurações</h1>
           </div>
-          <Settings masterKey={masterKey} userPin={userPin} onLogout={onLogout} onPinChange={onPinChange} />
+          <SettingsModal masterKey={masterKey} userPin={userPin} onLogout={onLogout} onPinChange={onPinChange} />
         </div>
       ) : selectedCategory ? (
         <CategoryView 
