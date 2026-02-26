@@ -39,6 +39,15 @@ interface InvitedUser {
 const ModalGravacao = ({ onClose, onSave, onFileAttach }: { onClose: () => void, onSave: (title: string, description: string) => void, onFileAttach: () => void }) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSave = () => {
+    setIsSaving(true);
+    setTimeout(() => {
+      onSave(title, description);
+      setIsSaving(false);
+    }, 800);
+  };
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
@@ -61,8 +70,9 @@ const ModalGravacao = ({ onClose, onSave, onFileAttach }: { onClose: () => void,
               <CloudUpload size={24} />
               <span className="text-sm font-medium">Anexar PDF, PNG ou JPG</span>
             </div>
-            <button onClick={() => { onSave(title, description); }} disabled={!title.trim()} className="w-full py-4 bg-blue-600 text-white rounded-xl font-bold shadow-lg shadow-blue-600/20 hover:bg-blue-700 transition-all disabled:opacity-50">
-              Salvar
+            <button onClick={handleSave} disabled={!title.trim() || isSaving} className="w-full py-4 bg-blue-600 text-white rounded-xl font-bold shadow-lg shadow-blue-600/20 hover:bg-blue-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2">
+              {isSaving ? <RefreshCw size={20} className="animate-spin" /> : null}
+              {isSaving ? 'Sincronizando...' : 'Salvar'}
             </button>
           </div>
         </div>
@@ -322,23 +332,23 @@ export function Dashboard({ onLogout, userPin, masterKey, initialRecoveryLog, la
   const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
   const [deletePin, setDeletePin] = useState('');
   const [deleteError, setDeleteError] = useState('');
-  const [toasts, setToasts] = useState<{ id: string; message: string }[]>([]);
+  const [toasts, setToasts] = useState<{ id: string; message: string; type: 'success' | 'error' }[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [securityLogs, setSecurityLogs] = useState<string[]>([]);
   const [showSettings, setShowSettings] = useState(false);
   const [showExtraUserModal, setShowExtraUserModal] = useState(false);
   const [invitedUsers, setInvitedUsers] = useState<InvitedUser[]>([]);
 
-  const showToast = (message: string) => {
+  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     const id = Math.random().toString(36).substr(2, 9);
-    setToasts(prev => [...prev, { id, message }]);
+    setToasts(prev => [...prev, { id, message, type }]);
     setTimeout(() => {
       setToasts(prev => prev.filter(t => t.id !== id));
     }, 3000);
   };
 
   const handleReset = () => { localStorage.clear(); window.location.reload(); };
-  const handleSendSupport = () => { alert('Mensagem enviada!'); setShowSupport(false); setMessage(''); };
+  const handleSendSupport = () => { showToast('Mensagem enviada com sucesso!', 'success'); setShowSupport(false); setMessage(''); };
 
   const handleAddCategory = () => {
     if (newCategoryName.trim()) {
@@ -588,9 +598,9 @@ export function Dashboard({ onLogout, userPin, masterKey, initialRecoveryLog, la
       {showExtraUserModal && <ModalExtraUser onClose={() => setShowExtraUserModal(false)} categories={categories} onInvite={handleInviteUser} invitedUsers={invitedUsers} />}
 
       {/* Toasts */}
-      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[80] flex flex-col gap-2">
+      <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[80] flex flex-col gap-2 w-[90%] max-w-sm">
         {toasts.map(toast => (
-          <div key={toast.id} className="bg-slate-900 text-white py-2 px-4 rounded-full text-sm font-medium shadow-lg animate-in fade-in slide-in-from-bottom">
+          <div key={toast.id} className={`py-3 px-4 rounded-2xl text-sm font-bold shadow-xl flex items-center justify-center animate-fade-in-down ${toast.type === 'success' ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'}`}>
             {toast.message}
           </div>
         ))}
