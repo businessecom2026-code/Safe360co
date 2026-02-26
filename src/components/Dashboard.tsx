@@ -339,6 +339,21 @@ export function Dashboard({ onLogout, userPin, masterKey, initialRecoveryLog, la
   const [showExtraUserModal, setShowExtraUserModal] = useState(false);
   const [invitedUsers, setInvitedUsers] = useState<InvitedUser[]>([]);
 
+  // ==========================================
+  // ESTADOS GLOBAIS DE ASSINATURA E PAGAMENTO
+  // ==========================================
+  const [plan, setPlan] = useState<'free' | 'pro' | 'scale'>(() => {
+    const savedPlan = localStorage.getItem('userPlan');
+    return (savedPlan as 'free' | 'pro' | 'scale') || 'free';
+  });
+
+  const [storageLimit, setStorageLimit] = useState<number>(() => {
+    const savedLimit = localStorage.getItem('storageLimit');
+    return savedLimit ? parseInt(savedLimit, 10) : 200;
+  });
+
+  const [isProcessing, setIsProcessing] = useState(false);
+
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     const id = Math.random().toString(36).substr(2, 9);
     setToasts(prev => [...prev, { id, message, type }]);
@@ -349,6 +364,33 @@ export function Dashboard({ onLogout, userPin, masterKey, initialRecoveryLog, la
 
   const handleReset = () => { localStorage.clear(); window.location.reload(); };
   const handleSendSupport = () => { showToast('Mensagem enviada com sucesso!', 'success'); setShowSupport(false); setMessage(''); };
+
+  // ==========================================
+  // FUNÇÃO DE UPGRADE (SIMULAÇÃO REVOLUT)
+  // ==========================================
+  const handlePlanUpgrade = () => {
+    if (isProcessing || plan === 'scale') return;
+
+    setIsProcessing(true);
+
+    setTimeout(() => {
+      if (plan === 'free') {
+        setPlan('pro');
+        setStorageLimit(500);
+        localStorage.setItem('userPlan', 'pro');
+        localStorage.setItem('storageLimit', '500');
+        showToast('Upgrade para PRO realizado com sucesso!', 'success');
+      } else if (plan === 'pro') {
+        setPlan('scale');
+        setStorageLimit(2000);
+        localStorage.setItem('userPlan', 'scale');
+        localStorage.setItem('storageLimit', '2000');
+        showToast('Upgrade para SCALE realizado com sucesso!', 'success');
+      }
+      
+      setIsProcessing(false);
+    }, 2000);
+  };
 
   const handleAddCategory = () => {
     if (newCategoryName.trim()) {
@@ -513,7 +555,15 @@ export function Dashboard({ onLogout, userPin, masterKey, initialRecoveryLog, la
             <button onClick={() => setShowSettings(false)} className="p-2 mr-2 text-slate-500 hover:text-blue-600"><ArrowLeft size={20} /></button>
             <h1 className="text-2xl font-bold">Configurações</h1>
           </div>
-          <SettingsModal masterKey={masterKey} userPin={userPin} onLogout={onLogout} onPinChange={onPinChange} />
+          <SettingsModal 
+            masterKey={masterKey} 
+            userPin={userPin} 
+            onLogout={onLogout} 
+            onPinChange={onPinChange} 
+            currentPlan={plan}
+            isProcessing={isProcessing}
+            onUpgrade={handlePlanUpgrade}
+          />
         </div>
       ) : selectedCategory ? (
         <CategoryView 

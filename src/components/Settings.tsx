@@ -1,4 +1,4 @@
-import { Shield, Palette, Gem, LogOut, ChevronRight, Eye, KeyRound, Moon, Sun, Trash2, AlertTriangle } from 'lucide-react';
+import { Shield, Palette, Gem, LogOut, ChevronRight, Eye, KeyRound, Moon, Sun, Trash2, AlertTriangle, RefreshCw } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 interface SettingsProps {
@@ -6,6 +6,9 @@ interface SettingsProps {
   userPin: string;
   onLogout: () => void;
   onPinChange: (newPin: string) => void;
+  currentPlan: 'free' | 'pro' | 'scale';
+  isProcessing: boolean;
+  onUpgrade: () => void;
 }
 
 export const PRICES = {
@@ -14,7 +17,7 @@ export const PRICES = {
   discount: 0.10
 };
 
-export const SettingsModal = ({ masterKey, userPin, onLogout, onPinChange }: SettingsProps) => {
+export const SettingsModal = ({ masterKey, userPin, onLogout, onPinChange, currentPlan, isProcessing, onUpgrade }: SettingsProps) => {
   const [isDark, setIsDark] = useState(false);
   const [showPinConfirm, setShowPinConfirm] = useState(false);
   const [showMasterKey, setShowMasterKey] = useState(false);
@@ -31,6 +34,24 @@ export const SettingsModal = ({ masterKey, userPin, onLogout, onPinChange }: Set
   const [isLocked, setIsLocked] = useState(false);
   const [lockTimeLeft, setLockTimeLeft] = useState(0);
   const [successMessage, setSuccessMessage] = useState('');
+
+  // ==========================================
+  // LÓGICA DE ASSINATURA E ARMAZENAMENTO
+  // ==========================================
+  const usedStorageMB = 40; // Exemplo de uso
+  
+  const planDetails = {
+    free: { name: 'FREE', limit: 200, label: '200MB' },
+    pro: { name: 'PRO', limit: 500, label: '500MB' },
+    scale: { name: 'SCALE', limit: 2000, label: '2GB' }
+  };
+  
+  const currentLimit = planDetails[currentPlan].limit;
+  const currentLimitLabel = planDetails[currentPlan].label;
+  const planName = planDetails[currentPlan].name;
+  
+  // Cálculo automático da porcentagem (limitado a 100% visualmente)
+  const usagePercentage = Math.min(100, (usedStorageMB / currentLimit) * 100);
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -178,22 +199,41 @@ export const SettingsModal = ({ masterKey, userPin, onLogout, onPinChange }: Set
         <div className="mb-8">
           <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 px-4">Assinatura</h2>
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
-            <div className="flex justify-between items-center mb-4">
-              <div className="w-full pr-4">
-                <p className="font-semibold">Plano Atual: <span className="text-blue-600">Básico</span></p>
-                <div className="flex justify-between text-sm text-slate-500 mt-1 mb-1">
-                  <span>2MB usados</span>
-                  <span>100MB</span>
+            <div className="flex justify-between items-start mb-4">
+              <div className="w-full pr-4 overflow-hidden">
+                <p className="font-semibold mb-1">Plano Atual: <span className="text-blue-600">{planName}</span></p>
+                <div className="flex justify-between text-xs text-slate-500 mb-2">
+                  <span>{usedStorageMB}MB de {currentLimitLabel} usados</span>
                 </div>
-                <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
-                  <div className="bg-blue-600 h-2 rounded-full" style={{ width: '2%' }}></div>
+                {/* Barra de Progresso Slim */}
+                <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                  <div 
+                    className="bg-blue-500 h-full rounded-full transition-all duration-500" 
+                    style={{ width: `${usagePercentage}%` }}
+                  ></div>
                 </div>
               </div>
-              <Gem size={24} className="text-blue-500 flex-shrink-0" />
+              <Gem size={24} className="text-blue-500 flex-shrink-0 mt-1" />
             </div>
-            <button className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-all">
-              Upgrade para Plano SCALE ({PRICES.discount * 100}% OFF Anual)
-            </button>
+            
+            {/* Botões Dinâmicos de Upgrade */}
+            {currentPlan === 'free' && (
+              <button onClick={onUpgrade} disabled={isProcessing} className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-all text-sm flex items-center justify-center gap-2 disabled:opacity-70">
+                {isProcessing ? <RefreshCw size={16} className="animate-spin" /> : null}
+                {isProcessing ? 'Processando...' : 'Upgrade para PRO (500MB)'}
+              </button>
+            )}
+            {currentPlan === 'pro' && (
+              <button onClick={onUpgrade} disabled={isProcessing} className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-all text-sm flex items-center justify-center gap-2 disabled:opacity-70">
+                {isProcessing ? <RefreshCw size={16} className="animate-spin" /> : null}
+                {isProcessing ? 'Processando...' : 'Upgrade para SCALE (2GB) - 10% OFF'}
+              </button>
+            )}
+            {currentPlan === 'scale' && (
+              <div className="w-full py-3 bg-slate-100 dark:bg-slate-800 text-slate-500 rounded-xl font-bold text-center text-sm">
+                Plano Máximo Atingido
+              </div>
+            )}
           </div>
         </div>
 
