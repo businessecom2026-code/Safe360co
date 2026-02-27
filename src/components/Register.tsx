@@ -4,12 +4,13 @@ import { Language, translations } from '../translations';
 
 interface RegisterProps {
   onBack: () => void;
-  onSuccess: () => void;
+  onRegisterSubmit: (email: string, password: string) => Promise<void>;
   onLogin: () => void;
   lang: Language;
+  error: string;
 }
 
-export function Register({ onBack, onSuccess, onLogin, lang }: RegisterProps) {
+export function Register({ onBack, onRegisterSubmit, onLogin, lang, error }: RegisterProps) {
   const t = translations[lang];
   const [formData, setFormData] = useState({
     name: '',
@@ -24,11 +25,9 @@ export function Register({ onBack, onSuccess, onLogin, lang }: RegisterProps) {
     if (!acceptedTerms) return;
     
     setIsLoading(true);
-    // Simulate API call
-    setTimeout(() => {
+    onRegisterSubmit(formData.email, formData.password).finally(() => {
       setIsLoading(false);
-      onSuccess();
-    }, 1500);
+    });
   };
 
   return (
@@ -48,7 +47,8 @@ export function Register({ onBack, onSuccess, onLogin, lang }: RegisterProps) {
               <ShieldCheck size={24} />
             </div>
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{t.auth.register.title}</h2>
-            <p className="text-gray-500 dark:text-gray-400 mt-2">{t.auth.register.subtitle}</p>
+                        <p className="text-gray-500 dark:text-gray-400 mt-2">{t.auth.register.subtitle}</p>
+            {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">

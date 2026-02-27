@@ -4,7 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { Navbar } from './components/Navbar';
 import { Hero } from './components/Hero';
 import { Pricing } from './components/Pricing';
@@ -13,21 +14,49 @@ import { Register } from './components/Register';
 import { Login } from './components/Login';
 import { PinPad } from './components/PinPad';
 import { Dashboard } from './components/Dashboard';
-import { Language, translations } from './translations';
+import { AdminConsole } from './components/AdminConsole';
+import { Language } from './translations';
+import { User } from './types';
 
 export default function App() {
-  const [currentView, setCurrentView] = useState<'landing' | 'register' | 'login' | 'pinpad' | 'dashboard'>('landing');
+  const { user, token, lang, authError, t, handleLogin, handleRegister, handleLogout, setLang } = useAuth();
+  const [currentView, setCurrentView] = useState<'landing' | 'register' | 'login' | 'pinpad' | 'dashboard' | 'adminConsole'>('landing');
   const [userPin, setUserPin] = useState<string>('');
   const [masterKey, setMasterKey] = useState<string>('');
   const [recoveryInitiated, setRecoveryInitiated] = useState(false);
-  const [lang, setLang] = useState<Language>('pt');
 
-  const t = translations[lang];
+  useEffect(() => {
+    if (user && !token) {
+      // User is logged in but token is missing, force logout (e.g., token expired or cleared manually)
+      handleLogout();
+    } else if (user && !currentView && token && user.role === 'master') {
+      setCurrentView('adminConsole');
+    } else if (user && !currentView && token) {
+      // If user is logged in and no specific view, and has a token, go to pinpad
+      setCurrentView('pinpad');
+    }
+  }, [user, token, currentView, handleLogout]);
 
-  // If dashboard, we might want to hide the main navbar/footer or adjust them.
-  // For now, let's keep it simple. If dashboard, we render just the dashboard component which has its own nav.
+  // Redirect to dashboard if user is logged in and pin is set
+  useEffect(() => {
+    if (user && userPin && currentView === 'pinpad') {
+      setCurrentView('dashboard');
+    }
+  }, [user, userPin, currentView]);
 
-  if (currentView === 'dashboard' || currentView === 'pinpad') {
+  // If user logs out, reset view to landing
+  useEffect(() => {
+    if (!user && (currentView === 'pinpad' || currentView === 'dashboard')) {
+      setCurrentView('landing');
+    }
+  }, [user, currentView]);
+
+  if (currentView === 'dashboard' || currentView === 'pinpad' || currentView === 'adminConsole') {
+    if (!user) {
+      setCurrentView('landing');
+      return null; // Don't render these views if no user
+    }
+
     if (currentView === 'pinpad') {
       return (
         <PinPad 
@@ -41,36 +70,15 @@ export default function App() {
           lang={lang}
         />
       );
+    } else if (currentView === 'adminConsole' && user?.role === 'master') {
+      return (
+        <AdminConsole onLogout={handleLogout} />
+      );
     }
     return (
       <Dashboard 
-        onLogout={() => {
-          setCurrentView('landing');
-          setRecoveryInitiated(false);
-        }} 
-        userPin={userPin} 
-        masterKey={masterKey}
-        initialRecoveryLog={recoveryInitiated}
-        lang={lang}
-        setLang={setLang}
-        onPinChange={setUserPin}
-      />
-    );
-  }
-
-  if (currentView === 'dashboard') {
-    return (
-      <Dashboard 
-        onLogout={() => {
-          setCurrentView('landing');
-          setRecoveryInitiated(false);
-        }} 
-        userPin={userPin} 
-        masterKey={masterKey}
-        initialRecoveryLog={recoveryInitiated}
-        lang={lang}
-        setLang={setLang}
-        onPinChange={setUserPin}
+        onLogout={handleLogout}
+        user={user}
       />
     );
   }
@@ -81,6 +89,10 @@ export default function App() {
         onLogin={() => setCurrentView('login')} 
         lang={lang} 
         setLang={setLang} 
+        user={user}
+        onAdminConsole={() => setCurrentView('adminConsole')}
+        onDashboard={() => setCurrentView('dashboard')}
+        onLogout={handleLogout}
       />
       <main>
         {currentView === 'landing' && (
@@ -92,17 +104,25 @@ export default function App() {
         {currentView === 'register' && (
           <Register 
             onBack={() => setCurrentView('landing')} 
-            onSuccess={() => setCurrentView('pinpad')}
+            onRegisterSubmit={async (email, password) => {
+              const success = await handleRegister(email, password);
+              if (success) setCurrentView('login');
+            }}
             onLogin={() => setCurrentView('login')}
             lang={lang}
+            error={authError}
           />
         )}
         {currentView === 'login' && (
           <Login 
             onBack={() => setCurrentView('landing')}
-            onSuccess={() => setCurrentView('pinpad')}
+            onLoginSubmit={async (email, password) => {
+              const success = await handleLogin(email, password);
+              if (success) setCurrentView('pinpad');
+            }}
             onRegister={() => setCurrentView('register')}
             lang={lang}
+            error={authError}
           />
         )}
       </main>
