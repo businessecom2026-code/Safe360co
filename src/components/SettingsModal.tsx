@@ -1,5 +1,5 @@
 import { Shield, Palette, Gem, LogOut, ChevronRight, Eye, KeyRound, Moon, Sun, Trash2, AlertTriangle, RefreshCw, CreditCard, Receipt, Download, Upload, Timer } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 
 interface SettingsProps {
   masterKey: string;
@@ -357,10 +357,8 @@ export const SettingsModal = ({ masterKey, userPin, onLogout, onPinChange, curre
               <>
                 <button onClick={onUpgrade} disabled={isProcessing} className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-all text-sm flex items-center justify-center gap-2 disabled:opacity-70">
                   {isProcessing ? <RefreshCw size={16} className="animate-spin" /> : null}
-                  {isProcessing ? 'Aguardando Pagamento...' : `Upgrade para ${currentPlan === 'free' ? 'PRO (500MB)' : 'SCALE (2GB)'}`}
+                  {isProcessing ? 'Processando Pagamento...' : `Upgrade para ${currentPlan === 'free' ? 'PRO (500MB)' : 'SCALE (2GB)'}`}
                 </button>
-                {/* Container para o botão da Revolut Pay */}
-                <div id="revolut-pay" className="mt-4" style={{ display: isProcessing ? 'block' : 'none' }}></div>
               </>
             )}
             {currentPlan === 'scale' && (

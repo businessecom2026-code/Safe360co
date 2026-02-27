@@ -1,14 +1,19 @@
-import { ShieldCheck, Globe } from 'lucide-react';
+import { ShieldCheck, Globe, LayoutDashboard, Settings } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
 import { Language, translations } from '../translations';
+import { User } from '../types';
 
 interface NavbarProps {
   onLogin: () => void;
   lang: Language;
   setLang: (lang: Language) => void;
+  user: User | null;
+  onAdminConsole: () => void;
+  onDashboard: () => void;
+  onLogout: () => void;
 }
 
-export function Navbar({ onLogin, lang, setLang }: NavbarProps) {
+export function Navbar({ onLogin, lang, setLang, user, onAdminConsole, onDashboard, onLogout }: NavbarProps) {
   const t = translations[lang];
 
   return (
@@ -22,6 +27,26 @@ export function Navbar({ onLogin, lang, setLang }: NavbarProps) {
             </span>
           </div>
           <div className="flex items-center gap-4">
+            {user && (
+              <div className="flex items-center gap-2">
+                {user.role === 'master' && (
+                  <button 
+                    onClick={onAdminConsole}
+                    className="flex items-center gap-1 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                  >
+                    <Settings size={16} />
+                    {t('ecom360_management')}
+                  </button>
+                )}
+                <button 
+                  onClick={onDashboard}
+                  className="flex items-center gap-1 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                >
+                  <LayoutDashboard size={16} />
+                  {t('dashboard')}
+                </button>
+              </div>
+            )}
             <div className="flex items-center gap-2 bg-gray-100 dark:bg-slate-800 rounded-lg p-1">
               <Globe size={16} className="text-gray-500 ml-1" />
               <select 
@@ -35,12 +60,21 @@ export function Navbar({ onLogin, lang, setLang }: NavbarProps) {
               </select>
             </div>
             <ThemeToggle />
-            <button 
-              onClick={onLogin}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-            >
-              {t.nav.login}
-            </button>
+            {user ? (
+              <button 
+                onClick={onLogout}
+                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+              >
+                {t('logout')}
+              </button>
+            ) : (
+              <button 
+                onClick={onLogin}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+              >
+                {t.nav.login}
+              </button>
+            )}
           </div>
         </div>
       </div>

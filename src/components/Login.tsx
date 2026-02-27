@@ -4,12 +4,13 @@ import { Language, translations } from '../translations';
 
 interface LoginProps {
   onBack: () => void;
-  onSuccess: () => void;
+  onLoginSubmit: (email: string, password: string) => Promise<void>;
   onRegister: () => void;
   lang: Language;
+  error: string;
 }
 
-export function Login({ onBack, onSuccess, onRegister, lang }: LoginProps) {
+export function Login({ onBack, onLoginSubmit, onRegister, lang, error }: LoginProps) {
   const t = translations[lang];
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -18,11 +19,9 @@ export function Login({ onBack, onSuccess, onRegister, lang }: LoginProps) {
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    // Simulate API call
-    setTimeout(() => {
+    onLoginSubmit(email, password).finally(() => {
       setIsLoading(false);
-      onSuccess();
-    }, 1500);
+    });
   };
 
   return (
@@ -42,7 +41,8 @@ export function Login({ onBack, onSuccess, onRegister, lang }: LoginProps) {
               <Lock size={24} />
             </div>
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{t.auth.login.title}</h2>
-            <p className="text-gray-500 dark:text-gray-400 mt-2">{t.auth.login.subtitle}</p>
+                        <p className="text-gray-500 dark:text-gray-400 mt-2">{t.auth.login.subtitle}</p>
+            {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
