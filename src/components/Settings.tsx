@@ -1,4 +1,4 @@
-import { Shield, Palette, Gem, LogOut, ChevronRight, Eye, KeyRound, Moon, Sun, Trash2, AlertTriangle, RefreshCw } from 'lucide-react';
+import { Shield, Palette, Gem, LogOut, ChevronRight, Eye, KeyRound, Moon, Sun, Trash2, AlertTriangle, RefreshCw, CreditCard, Receipt, Download, Upload, Timer } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 interface SettingsProps {
@@ -9,6 +9,10 @@ interface SettingsProps {
   currentPlan: 'free' | 'pro' | 'scale';
   isProcessing: boolean;
   onUpgrade: () => void;
+  onResetPlan: () => void;
+  onSwitchToAdmin: () => void;
+  transactions: { id: string; description: string; amount: string; date: string; icon: 'credit-card' | 'receipt' }[];
+  activityLogs: { id: string; time: string; message: string }[];
 }
 
 export const PRICES = {
@@ -17,7 +21,7 @@ export const PRICES = {
   discount: 0.10
 };
 
-export const SettingsModal = ({ masterKey, userPin, onLogout, onPinChange, currentPlan, isProcessing, onUpgrade }: SettingsProps) => {
+export const SettingsModal = ({ masterKey, userPin, onLogout, onPinChange, currentPlan, isProcessing, onUpgrade, onResetPlan, onSwitchToAdmin, transactions, activityLogs }: SettingsProps) => {
   const [isDark, setIsDark] = useState(false);
   const [showPinConfirm, setShowPinConfirm] = useState(false);
   const [showMasterKey, setShowMasterKey] = useState(false);
@@ -30,10 +34,125 @@ export const SettingsModal = ({ masterKey, userPin, onLogout, onPinChange, curre
   const [confirmNewPinInput, setConfirmNewPinInput] = useState('');
   const [changePinError, setChangePinError] = useState('');
   
+  const [autoLockTime, setAutoLockTime] = useState<number>(() => {
+    const savedTime = localStorage.getItem('autoLockTime');
+    return savedTime ? parseInt(savedTime, 10) : 300; // Padrão: 5 minutos
+  });
+
+  const handleAutoLockChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const timeInSeconds = parseInt(e.target.value, 10);
+    setAutoLockTime(timeInSeconds);
+    localStorage.setItem('autoLockTime', timeInSeconds.toString());
+    
+    let message = 'Bloqueio automático desativado.';
+    if (timeInSeconds > 0) {
+        message = `Bloqueio automático definido para ${timeInSeconds / 60} minuto(s).`;
+    }
+    showToast(message, 'success');
+  };
+
   const [pinAttempts, setPinAttempts] = useState(0);
   const [isLocked, setIsLocked] = useState(false);
   const [lockTimeLeft, setLockTimeLeft] = useState(0);
   const [successMessage, setSuccessMessage] = useState('');
+
+  // ==========================================
+  // GESTÃO DE USUÁRIOS (CONVIDADOS)
+  // ==========================================
+  const [guests, setGuests] = useState<{ id: string; email: string; vaults: string[] }[]>(() => {
+    const saved = localStorage.getItem('extraUsers');
+    return saved ? JSON.parse(saved) : [
+      { id: '1', email: 'convidado@email.com', vaults: ['Social'] },
+      { id: '2', email: 'socio@empresa.com', vaults: ['Bancos', 'Social'] }
+    ];
+  });
+
+  const [toasts, setToasts] = useState<{ id: string; message: string; type: 'success' | 'error' }[]>([]);
+
+  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+    const id = Math.random().toString(36).substr(2, 9);
+    setToasts(prev => [...prev, { id, message, type }]);
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== id));
+    }, 3000);
+  };
+
+  const handleRemoveGuest = (email: string) => {
+    const confirmDelete = window.confirm(
+      'Tem certeza que deseja remover este usuário?\nO acesso dele será revogado imediatamente e o slot ficará livre.'
+    );
+    
+    if (confirmDelete) {
+      const updatedGuests = guests.filter(g => g.email !== email);
+      setGuests(updatedGuests);
+      localStorage.setItem('extraUsers', JSON.stringify(updatedGuests));
+      window.dispatchEvent(new Event('storage'));
+      showToast('👤 Acesso removido com sucesso', 'error');
+      
+      // Simula a revogação para o Guest (via localStorage)
+      localStorage.setItem('guestRevoked', 'true');
+    }
+  };
+
+  // ==========================================
+  // BACKUP E RESTAURAÇÃO (JSON)
+  // ==========================================
+  const handleExportBackup = () => {
+    const confirmExport = window.confirm(
+      '⚠️ Este arquivo contém dados sensíveis. Guarde-o em um local seguro ou pen drive offline. Deseja continuar?'
+    );
+
+    if (confirmExport) {
+      const backupData = {
+        categories: localStorage.getItem('safe360_categories') ? JSON.parse(localStorage.getItem('safe360_categories')!) : [],
+        items: localStorage.getItem('safe360_items') ? JSON.parse(localStorage.getItem('safe360_items')!) : [],
+        extraUsers: guests,
+        userPlan: currentPlan,
+        masterKey: masterKey, // Apenas para referência, não descriptografa
+      };
+
+      const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'safe360_backup.json';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast('Backup gerado com sucesso!', 'success');
+    }
+  };
+
+  const handleImportBackup = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const text = e.target?.result as string;
+        const backupData = JSON.parse(text);
+
+        // Validação básica do backup
+        if (backupData.categories && backupData.items && backupData.extraUsers) {
+          localStorage.setItem('safe360_categories', JSON.stringify(backupData.categories));
+          localStorage.setItem('safe360_items', JSON.stringify(backupData.items));
+          localStorage.setItem('extraUsers', JSON.stringify(backupData.extraUsers));
+          localStorage.setItem('userPlan', backupData.userPlan || 'free');
+          
+          showToast('Backup restaurado com sucesso! A página será recarregada.', 'success');
+          setTimeout(() => window.location.reload(), 2000);
+        } else {
+          showToast('Arquivo de backup inválido.', 'error');
+        }
+      } catch (error) {
+        showToast('Erro ao ler o arquivo de backup.', 'error');
+        console.error("Erro ao importar backup:", error);
+      }
+    };
+    reader.readAsText(file);
+  };
 
   // ==========================================
   // LÓGICA DE ASSINATURA E ARMAZENAMENTO
@@ -176,6 +295,23 @@ export const SettingsModal = ({ masterKey, userPin, onLogout, onPinChange, curre
               </div>
               <ChevronRight size={20} className="text-slate-400" />
             </button>
+            <div className="h-px bg-slate-200 dark:bg-slate-800 mx-4"></div>
+            <div className="p-4 flex justify-between items-center">
+                <div className="flex items-center gap-4">
+                    <Timer size={20} className="text-slate-500" />
+                    <span className="font-semibold">Bloqueio Automático</span>
+                </div>
+                <select 
+                    value={autoLockTime} 
+                    onChange={handleAutoLockChange}
+                    className="bg-slate-100 dark:bg-slate-800 border-none rounded-lg text-sm font-semibold py-1 px-2 focus:ring-2 focus:ring-blue-500 outline-none"
+                >
+                    <option value="0">Nunca</option>
+                    <option value="60">1 Minuto</option>
+                    <option value="300">5 Minutos</option>
+                    <option value="900">15 Minutos</option>
+                </select>
+            </div>
           </div>
         </div>
 
@@ -217,23 +353,140 @@ export const SettingsModal = ({ masterKey, userPin, onLogout, onPinChange, curre
             </div>
             
             {/* Botões Dinâmicos de Upgrade */}
-            {currentPlan === 'free' && (
-              <button onClick={onUpgrade} disabled={isProcessing} className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-all text-sm flex items-center justify-center gap-2 disabled:opacity-70">
-                {isProcessing ? <RefreshCw size={16} className="animate-spin" /> : null}
-                {isProcessing ? 'Processando...' : 'Upgrade para PRO (500MB)'}
-              </button>
-            )}
-            {currentPlan === 'pro' && (
-              <button onClick={onUpgrade} disabled={isProcessing} className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-all text-sm flex items-center justify-center gap-2 disabled:opacity-70">
-                {isProcessing ? <RefreshCw size={16} className="animate-spin" /> : null}
-                {isProcessing ? 'Processando...' : 'Upgrade para SCALE (2GB) - 10% OFF'}
-              </button>
+            {currentPlan !== 'scale' && (
+              <>
+                <button onClick={onUpgrade} disabled={isProcessing} className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-all text-sm flex items-center justify-center gap-2 disabled:opacity-70">
+                  {isProcessing ? <RefreshCw size={16} className="animate-spin" /> : null}
+                  {isProcessing ? 'Aguardando Pagamento...' : `Upgrade para ${currentPlan === 'free' ? 'PRO (500MB)' : 'SCALE (2GB)'}`}
+                </button>
+                {/* Container para o botão da Revolut Pay */}
+                <div id="revolut-pay" className="mt-4" style={{ display: isProcessing ? 'block' : 'none' }}></div>
+              </>
             )}
             {currentPlan === 'scale' && (
               <div className="w-full py-3 bg-slate-100 dark:bg-slate-800 text-slate-500 rounded-xl font-bold text-center text-sm">
                 Plano Máximo Atingido
               </div>
             )}
+            {currentPlan !== 'scale' && (
+              <p className="text-center text-[10px] text-slate-400 mt-3 font-medium">
+                Pagamento seguro via Revolut Checkout
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Histórico de Pagamentos */}
+        <div className="mb-8">
+          <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 px-4">Histórico de Pagamentos</h2>
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+            {transactions.length === 0 ? (
+              <div className="p-6 text-center text-slate-500 text-sm">
+                Nenhuma transação encontrada.
+              </div>
+            ) : (
+              <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                {transactions.map((tx) => (
+                  <div key={tx.id} className="p-4 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500">
+                        {tx.icon === 'credit-card' ? <CreditCard size={18} /> : <Receipt size={18} />}
+                      </div>
+                      <div>
+                        <p className="font-semibold text-sm">{tx.description}</p>
+                        <p className="text-xs text-slate-500">{tx.date}</p>
+                      </div>
+                    </div>
+                    <span className="font-bold text-sm text-slate-700 dark:text-slate-300">{tx.amount}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Usuários com Acesso */}
+        <div className="mb-8">
+          <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 px-4">Usuários com Acesso</h2>
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+            {guests.length === 0 ? (
+              <div className="p-6 text-center text-slate-500 text-sm">
+                Nenhum usuário extra configurado.
+              </div>
+            ) : (
+              <div className="divide-y divide-slate-100 dark:divide-slate-800 max-h-60 overflow-y-auto">
+                {guests.map((guest) => (
+                  <div key={guest.id} className="p-4 flex items-center justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-sm text-slate-800 dark:text-slate-200 truncate">
+                        {guest.email}
+                      </p>
+                      <p className="text-xs text-slate-500 truncate mt-0.5">
+                        Acesso: <span className="text-blue-500 font-medium">{guest.vaults.join(', ')}</span>
+                      </p>
+                    </div>
+                    <button 
+                      onClick={() => handleRemoveGuest(guest.email)}
+                      className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors flex-shrink-0"
+                      title="Revogar Acesso"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Atividade Recente */}
+        <div className="mb-8">
+          <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 px-4">Atividade Recente</h2>
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+            {activityLogs.length === 0 ? (
+              <div className="p-6 text-center text-slate-500 text-sm">
+                Nenhuma atividade registrada recentemente.
+              </div>
+            ) : (
+              <div className="divide-y divide-slate-100 dark:divide-slate-800 max-h-60 overflow-y-auto">
+                {activityLogs.map((log) => (
+                  <div key={log.id} className="p-4 flex items-start gap-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                    <div className="text-xs font-mono text-slate-400 mt-0.5 shrink-0">
+                      [{log.time}]
+                    </div>
+                    <p className="text-sm text-slate-700 dark:text-slate-300 leading-tight">
+                      {log.message}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Backup e Restauração */}
+        <div className="mb-8">
+          <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 px-4">Backup de Segurança</h2>
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden divide-y divide-slate-200 dark:divide-slate-800">
+            <button 
+              onClick={handleExportBackup}
+              className="w-full flex justify-between items-center p-4 text-left hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+            >
+              <div className="flex items-center gap-4">
+                <Download size={20} className="text-slate-500" />
+                <span className="font-semibold">Baixar Backup de Segurança (.json)</span>
+              </div>
+              <ChevronRight size={20} className="text-slate-400" />
+            </button>
+            
+            <label className="w-full flex justify-between items-center p-4 text-left hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer">
+              <div className="flex items-center gap-4">
+                <Upload size={20} className="text-slate-500" />
+                <span className="font-semibold">Importar Backup</span>
+              </div>
+              <ChevronRight size={20} className="text-slate-400" />
+              <input type="file" accept=".json" onChange={handleImportBackup} className="hidden" />
+            </label>
           </div>
         </div>
 
@@ -246,6 +499,16 @@ export const SettingsModal = ({ masterKey, userPin, onLogout, onPinChange, curre
           <button onClick={handleClearCache} className="w-full flex items-center justify-center gap-2 py-3 text-sm font-semibold text-red-600 dark:text-red-500 bg-red-500/10 hover:bg-red-500/20 rounded-xl transition-colors">
             <AlertTriangle size={16} />
             Limpar Cache do App
+          </button>
+          
+          {/* Botão de Reset Temporário (Dev Only) */}
+          <button onClick={onResetPlan} className="w-full flex items-center justify-center py-2 text-[10px] font-medium text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors mt-4">
+            Resetar para Plano FREE (Dev Only)
+          </button>
+          
+          {/* Botão de Switch para Admin (Dev Only) */}
+          <button onClick={onSwitchToAdmin} className="w-full flex items-center justify-center py-2 text-[10px] font-medium text-blue-400 hover:text-blue-600 transition-colors mt-2">
+            Forçar Modo Administrador (Dev Only)
           </button>
         </div>
       </div>

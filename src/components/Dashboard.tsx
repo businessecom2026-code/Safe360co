@@ -3,6 +3,8 @@ import { useState, useEffect } from 'react';
 import { Language, translations } from '../translations';
 import { SettingsModal, PRICES } from './Settings';
 
+import { initiateRevolutPay } from '../services/revolut';
+
 interface DashboardProps {
   onLogout: () => void;
   userPin: string;
@@ -340,6 +342,53 @@ export function Dashboard({ onLogout, userPin, masterKey, initialRecoveryLog, la
   const [invitedUsers, setInvitedUsers] = useState<InvitedUser[]>([]);
 
   // ==========================================
+  // LÓGICA DE ACESSO RESTRITO (GUEST / ADMIN)
+  // ==========================================
+  const [userRole, setUserRole] = useState<'ADMIN' | 'GUEST'>(() => {
+    const savedRole = localStorage.getItem('userRole');
+    return (savedRole as 'ADMIN' | 'GUEST') || 'ADMIN';
+  });
+  
+  const guestAllowedVaults = ['Social']; // Nomes dos cofres que o convidado pode ver
+
+  // Função para forçar a troca de papel (Dev/Test)
+  const handleSwitchToAdmin = () => {
+    setUserRole('ADMIN');
+    localStorage.setItem('userRole', 'ADMIN');
+    showToast('Modo Administrador ativado!', 'success');
+  };
+
+  // Filtra os cofres baseados na permissão
+  const visibleCategories = userRole === 'ADMIN' 
+    ? categories 
+    : categories.filter(category => guestAllowedVaults.includes(category.name));
+
+  // ==========================================
+  // AUDITORIA E LOGS DE ACESSO (MÁX 10 ITENS)
+  // ==========================================
+  const [activityLogs, setActivityLogs] = useState<{ id: string; time: string; message: string }[]>([]);
+
+  const logAccess = (userName: string, action: string, vaultName: string) => {
+    const now = new Date();
+    const timeString = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    
+    const newLog = {
+      id: Date.now().toString(),
+      time: timeString,
+      message: `${userName} ${action} o cofre '${vaultName}'`
+    };
+
+    setActivityLogs(prevLogs => {
+      const updatedLogs = [newLog, ...prevLogs].slice(0, 10);
+      return updatedLogs;
+    });
+
+    if (userRole === 'ADMIN' && userName !== 'Admin') {
+      showToast(`🔔 Alerta: Acesso detectado no cofre ${vaultName}`, 'success');
+    }
+  };
+
+  // ==========================================
   // ESTADOS GLOBAIS DE ASSINATURA E PAGAMENTO
   // ==========================================
   const [plan, setPlan] = useState<'free' | 'pro' | 'scale'>(() => {
@@ -353,6 +402,20 @@ export function Dashboard({ onLogout, userPin, masterKey, initialRecoveryLog, la
   });
 
   const [isProcessing, setIsProcessing] = useState(false);
+  const [transactions, setTransactions] = useState<{ id: string; description: string; amount: string; date: string; icon: 'credit-card' | 'receipt' }[]>(() => {
+    const saved = localStorage.getItem('transactions');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const handleResetPlan = () => {
+    setPlan('free');
+    setStorageLimit(200);
+    setTransactions([]);
+    localStorage.setItem('userPlan', 'free');
+    localStorage.setItem('storageLimit', '200');
+    localStorage.removeItem('transactions');
+    showToast('Plano resetado para FREE (Dev Only)', 'success');
+  };
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     const id = Math.random().toString(36).substr(2, 9);
@@ -362,34 +425,142 @@ export function Dashboard({ onLogout, userPin, masterKey, initialRecoveryLog, la
     }, 3000);
   };
 
+  // ==========================================
+  // SINCRONIZAÇÃO E REVOGAÇÃO (GUEST)
+  // ==========================================
+  // Simula a verificação periódica de alterações feitas pelo Admin
+  useEffect(() => {
+    if (userRole !== 'GUEST') return;
+
+    const checkSync = setInterval(() => {
+      // 1. Verifica se o acesso foi revogado (Simulação: checa uma flag no localStorage)
+      const isRevoked = localStorage.getItem('guestRevoked') === 'true';
+      if (isRevoked) {
+        clearInterval(checkSync);
+        localStorage.removeItem('guestRevoked'); // Limpa a flag
+        onLogout(); // Desloga o usuário
+        alert('🛑 Seu acesso foi revogado pelo Administrador.');
+        return;
+      }
+
+      // 2. Verifica se houve alteração nos itens (Simulação: checa um timestamp)
+      const lastUpdate = localStorage.getItem('lastItemsUpdate');
+      const currentUpdate = sessionStorage.getItem('currentItemsUpdate');
+      
+      if (lastUpdate && lastUpdate !== currentUpdate) {
+        sessionStorage.setItem('currentItemsUpdate', lastUpdate);
+        // Força re-renderização suave (simulada aqui recarregando os itens do storage)
+        const savedItems = localStorage.getItem('safe360_items');
+        if (savedItems) {
+          setItems(JSON.parse(savedItems));
+        }
+      }
+    }, 5000); // Checa a cada 5 segundos (Leve para não estourar limite)
+
+    return () => clearInterval(checkSync);
+  }, [userRole, onLogout]);
+
+  // Atualiza o timestamp sempre que o Admin modificar algo
+  useEffect(() => {
+    if (userRole === 'ADMIN') {
+      localStorage.setItem('lastItemsUpdate', Date.now().toString());
+    }
+  }, [items, categories, userRole]);
+
+  // ==========================================
+  // LÓGICA DE BLOQUEIO AUTOMÁTICO
+  // ==========================================
+  useEffect(() => {
+    const autoLockTimeStr = localStorage.getItem('autoLockTime');
+    const autoLockTime = autoLockTimeStr ? parseInt(autoLockTimeStr, 10) : 300; // Padrão 5 min
+
+    if (autoLockTime === 0) return; // Desativado
+
+    let inactivityTimer: NodeJS.Timeout;
+
+    const resetTimer = () => {
+      clearTimeout(inactivityTimer);
+      inactivityTimer = setTimeout(() => {
+        onLogout();
+      }, autoLockTime * 1000);
+    };
+
+    const events: (keyof WindowEventMap)[] = ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'];
+
+    const handleActivity = () => resetTimer();
+
+    events.forEach(event => window.addEventListener(event, handleActivity));
+    resetTimer();
+
+    return () => {
+      clearTimeout(inactivityTimer);
+      events.forEach(event => window.removeEventListener(event, handleActivity));
+    };
+  }, [onLogout]);
+
+  // Proteção de Pasta: Se o GUEST tentar acessar um cofre não autorizado
+  useEffect(() => {
+    if (userRole === 'GUEST' && selectedCategory && !guestAllowedVaults.includes(selectedCategory.name)) {
+      setSelectedCategory(null);
+      showToast('Acesso negado: Você não tem permissão para ver este cofre.', 'error');
+    }
+  }, [selectedCategory, userRole]);
+
   const handleReset = () => { localStorage.clear(); window.location.reload(); };
   const handleSendSupport = () => { showToast('Mensagem enviada com sucesso!', 'success'); setShowSupport(false); setMessage(''); };
 
   // ==========================================
-  // FUNÇÃO DE UPGRADE (SIMULAÇÃO REVOLUT)
+  // FUNÇÃO DE UPGRADE (INTEGRADA COM REVOLUT)
   // ==========================================
   const handlePlanUpgrade = () => {
     if (isProcessing || plan === 'scale') return;
 
+    // Mostra o container do botão da Revolut e marca como processando
+    const revolutContainer = document.getElementById('revolut-pay');
+    if (revolutContainer) {
+      revolutContainer.style.display = 'block';
+    }
     setIsProcessing(true);
 
-    setTimeout(() => {
-      if (plan === 'free') {
+    const nextPlan = plan === 'free' ? 'pro' : 'scale';
+    const amount = plan === 'free' ? 990 : 1990; // Em centavos (ex: €9.90)
+    
+    const onPaymentSuccess = () => {
+      const newTransaction = {
+        id: Date.now().toString(),
+        description: `Upgrade para ${nextPlan.toUpperCase()}`,
+        amount: `€ ${(amount / 100).toFixed(2).replace('.', ',')}`,
+        date: new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' }),
+        icon: 'credit-card' as const
+      };
+
+      if (nextPlan === 'pro') {
         setPlan('pro');
         setStorageLimit(500);
         localStorage.setItem('userPlan', 'pro');
         localStorage.setItem('storageLimit', '500');
-        showToast('Upgrade para PRO realizado com sucesso!', 'success');
-      } else if (plan === 'pro') {
+        showToast('✅ Plano PRO ativado! Seu novo limite é de 500MB.', 'success');
+      } else if (nextPlan === 'scale') {
         setPlan('scale');
         setStorageLimit(2000);
         localStorage.setItem('userPlan', 'scale');
         localStorage.setItem('storageLimit', '2000');
-        showToast('Upgrade para SCALE realizado com sucesso!', 'success');
+        showToast('✅ Plano SCALE ativado! Seu novo limite é de 2GB.', 'success');
       }
       
+      setTransactions(prev => {
+        const updated = [newTransaction, ...prev];
+        localStorage.setItem('transactions', JSON.stringify(updated));
+        return updated;
+      });
+      
       setIsProcessing(false);
-    }, 2000);
+      if (revolutContainer) {
+        revolutContainer.style.display = 'none';
+      }
+    };
+
+    initiateRevolutPay(amount, 'EUR', onPaymentSuccess);
   };
 
   const handleAddCategory = () => {
@@ -533,16 +704,20 @@ export function Dashboard({ onLogout, userPin, masterKey, initialRecoveryLog, la
               </button>
             )}
           </div>
-          <button onClick={() => setShowExtraUserModal(true)} className="flex items-center gap-1 text-slate-400 hover:text-blue-500 transition-colors">
-            <Plus size={16} />
-            <User size={16} />
-          </button>
+          {userRole === 'ADMIN' && (
+            <button onClick={() => setShowExtraUserModal(true)} className="flex items-center gap-1 text-slate-400 hover:text-blue-500 transition-colors">
+              <Plus size={16} />
+              <User size={16} />
+            </button>
+          )}
           <button onClick={() => setShowSupport(true)} className="text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-blue-600 transition-colors flex items-center gap-1">
             <HelpCircle size={18} /> <span className="hidden sm:inline">Ajuda</span>
           </button>
-          <button onClick={() => setShowSettings(true)} className="p-2 text-slate-400 hover:text-blue-500 transition-colors">
-            <SettingsIcon size={20} />
-          </button>
+          {userRole === 'ADMIN' && (
+            <button onClick={() => setShowSettings(true)} className="p-2 text-slate-400 hover:text-blue-500 transition-colors">
+              <SettingsIcon size={20} />
+            </button>
+          )}
           <button onClick={onLogout} className="p-2 text-slate-400 hover:text-red-500 transition-colors">
             <LogOut size={20} />
           </button>
@@ -563,6 +738,10 @@ export function Dashboard({ onLogout, userPin, masterKey, initialRecoveryLog, la
             currentPlan={plan}
             isProcessing={isProcessing}
             onUpgrade={handlePlanUpgrade}
+            onResetPlan={handleResetPlan}
+            onSwitchToAdmin={handleSwitchToAdmin}
+            transactions={transactions}
+            activityLogs={activityLogs}
           />
         </div>
       ) : selectedCategory ? (
@@ -575,32 +754,41 @@ export function Dashboard({ onLogout, userPin, masterKey, initialRecoveryLog, la
       ) : (
         <main className="p-4 max-w-full px-4 mx-auto pb-24">
           <div className="mb-8">
-            <h1 className="text-2xl font-bold mb-1">Olá, Usuário</h1>
-            <p className="text-slate-500 dark:text-slate-400 text-sm">Seu cofre está seguro.</p>
+            <h1 className="text-2xl font-bold mb-1">
+              Olá, {userRole === 'ADMIN' ? 'Usuário' : 'Convidado'}
+            </h1>
+            <p className="text-slate-500 dark:text-slate-400 text-sm">
+              {userRole === 'ADMIN' ? 'Seu cofre está seguro.' : 'Acesso restrito habilitado.'}
+            </p>
           </div>
 
           <div className="grid grid-cols-2 gap-4 mb-8">
-            {categories.map(category => (
-              <div key={category.id} onClick={() => setSelectedCategory(category)} className="relative group bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col items-center gap-3 cursor-pointer hover:border-blue-500 transition-all">
+            {visibleCategories.map(category => (
+              <div key={category.id} onClick={() => {
+                setSelectedCategory(category);
+                logAccess(userRole === 'ADMIN' ? 'Admin' : 'Convidado', 'visualizou', category.name);
+              }} className="relative group bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col items-center gap-3 cursor-pointer hover:border-blue-500 transition-all">
                 <div className={`w-12 h-12 rounded-full ${category.color} text-white flex items-center justify-center`}>
                   {category.icon === 'bank' && <Landmark size={24} />}
                   {category.icon === 'social' && <Share2 size={24} />}
                   {category.icon === 'custom' && <ShieldCheck size={24} />}
                 </div>
                 <span className="font-semibold">{category.name}</span>
-                {!category.isFixed && (
+                {!category.isFixed && userRole === 'ADMIN' && (
                   <button onClick={(e) => { e.stopPropagation(); handleDeleteRequest(category.id, 'category'); }} className="absolute top-2 right-2 w-6 h-6 bg-red-500/10 text-red-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                     <Trash2 size={14} />
                   </button>
                 )}
               </div>
             ))}
-            <div 
-              onClick={() => setShowAddCategory(true)}
-              className="bg-slate-50 dark:bg-slate-800/50 border-2 border-dashed border-slate-300 dark:border-slate-700 p-6 rounded-2xl flex flex-col items-center justify-center gap-3 cursor-pointer hover:border-blue-500 hover:text-blue-500 transition-all text-slate-500 dark:text-slate-400">
-              <Plus size={24} />
-              <span className="font-semibold text-sm">Novo Cofre</span>
-            </div>
+            {userRole === 'ADMIN' && (
+              <div 
+                onClick={() => setShowAddCategory(true)}
+                className="bg-slate-50 dark:bg-slate-800/50 border-2 border-dashed border-slate-300 dark:border-slate-700 p-6 rounded-2xl flex flex-col items-center justify-center gap-3 cursor-pointer hover:border-blue-500 hover:text-blue-500 transition-all text-slate-500 dark:text-slate-400">
+                <Plus size={24} />
+                <span className="font-semibold text-sm">Novo Cofre</span>
+              </div>
+            )}
           </div>
 
           {securityLogs.length > 0 && (
