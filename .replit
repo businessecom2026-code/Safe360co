@@ -1,4 +1,4 @@
-run = "npm run start"
+run = "npm install && npm run build && npm run start"
 entrypoint = "server.ts"
 modules = ["nodejs-18", "web", "nix"]
 
@@ -9,7 +9,7 @@ channel = "stable-25_05"
 NODE_ENV = "production"
 
 [deployment]
-run = ["sh", "-c", "npm run build && npm run start"]
+run = ["sh", "-c", "npm run start"]
 build = ["sh", "-c", "npm install && npm run build"]
 deploymentTarget = "cloudrun"
 
