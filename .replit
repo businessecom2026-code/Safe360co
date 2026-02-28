@@ -1,6 +1,6 @@
 run = "npm install && npm run build && npm run start"
 entrypoint = "server.ts"
-modules = ["nodejs-18", "web", "nix"]
+modules = ["nodejs-20", "web", "nix"]
 
 [nix]
 channel = "stable-25_05"
