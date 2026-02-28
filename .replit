@@ -1,8 +1,9 @@
 run = "npm run start"
 entrypoint = "server.ts"
+modules = ["nodejs-18", "web", "nix"]
 
 [nix]
-channel = "stable-24_05"
+channel = "stable-25_05"
 
 [env]
 NODE_ENV = "production"
