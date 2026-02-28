@@ -84,7 +84,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (!response.ok) {
         throw new Error(data.message || 'Failed to register');
       }
-      alert('Registration successful! Please log in.');
+      // Toast will be shown by the component that called handleRegister
       return true; // Indicate success
     } catch (error) {
       setAuthError((error as Error).message);

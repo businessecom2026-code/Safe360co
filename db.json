@@ -1,3 +1,182 @@
 {
-  "users": []
+  "users": [
+    {
+      "id": "user_1772289231337",
+      "email": "admin@ecom360.co",
+      "password": "$2b$10$xFNtqwRJBKsbHE01QwGlx.MUVfrsqhwMWqsU..j3O28CDF6rmnFay",
+      "role": "master",
+      "plan": "Scale",
+      "createdAt": "2026-02-28T14:33:51.337Z",
+      "planExpiresAt": "2027-02-28T14:33:51.338Z"
+    },
+    {
+      "id": "user_1772290000001",
+      "email": "owner@teste.com",
+      "password": "$2b$10$OqPJ8CUKSRWQfVpHveJyj.GUHoer9Ox9MfgDD0Jilshx9hPnR4fh6",
+      "role": "admin",
+      "plan": "Pro",
+      "createdAt": "2026-02-15T10:00:00.000Z",
+      "planExpiresAt": "2026-03-15T10:00:00.000Z"
+    },
+    {
+      "id": "user_1772290000002",
+      "email": "guest@teste.com",
+      "password": "$2b$10$OqPJ8CUKSRWQfVpHveJyj.GUHoer9Ox9MfgDD0Jilshx9hPnR4fh6",
+      "role": "guest",
+      "plan": "Free",
+      "createdAt": "2026-02-20T12:00:00.000Z",
+      "invitedBy": "user_1772290000001"
+    },
+    {
+      "id": "user_1772293383459",
+      "email": "teste@owner.com",
+      "password": "$2b$10$WzOW7XkkGV2JXccrBr7W8eaz7jkFWzp3ugK1wMNkYOMVVTALfMYOC",
+      "role": "admin",
+      "plan": "Free",
+      "createdAt": "2026-02-28T15:43:03.459Z",
+      "planExpiresAt": "2026-03-30T15:43:03.459Z"
+    },
+    {
+      "id": "user_1772293440574",
+      "email": "novoguest@teste.com",
+      "password": "$2b$10$1GHrrXi5eobPQeTf1pXT3ufAoloEDJjD7O33X07MfckoyFxbhxhQ6",
+      "role": "guest",
+      "createdAt": "2026-02-28T15:44:00.574Z",
+      "invitedBy": "user_1772293383459",
+      "activated": true
+    },
+    {
+      "id": "user_1772303538622",
+      "email": "businessecom2026@gmail.com",
+      "password": "$2b$10$3MSGz4x6B9EMhGTIMas99eZgQU2zi6gwqZl8i7C6fDAVWcF8S4j1i",
+      "role": "admin",
+      "plan": "Free",
+      "createdAt": "2026-02-28T18:32:18.622Z",
+      "planExpiresAt": "2026-03-30T18:32:18.622Z",
+      "resetToken": "360bc32576b3dacecce67ca33f1920595014fe57fabd7d9b4a48e1a54295af1b",
+      "resetTokenExpiry": "2026-02-28T19:04:07.485Z"
+    }
+  ],
+  "vaults": [
+    {
+      "id": "vault_001",
+      "name": "Documentos Pessoais",
+      "userId": "user_1772290000001",
+      "createdAt": "2026-02-16T09:00:00.000Z",
+      "status": "active",
+      "data": [
+        {
+          "id": "item_001",
+          "title": "RG Digitalizado",
+          "description": "Scan do RG frente e verso. Numero: 12.345.678-9",
+          "createdAt": "2026-02-16T10:00:00.000Z",
+          "updatedAt": "2026-02-16T10:00:00.000Z"
+        }
+      ]
+    },
+    {
+      "id": "vault_002",
+      "name": "Senhas",
+      "userId": "user_1772290000001",
+      "createdAt": "2026-02-17T14:00:00.000Z",
+      "status": "active",
+      "data": [
+        {
+          "id": "item_002",
+          "title": "Gmail",
+          "description": "Login: owner@teste.com\nSenha: ****",
+          "createdAt": "2026-02-17T15:00:00.000Z",
+          "updatedAt": "2026-02-17T15:00:00.000Z"
+        },
+        {
+          "id": "item_003",
+          "title": "Banco Itau",
+          "description": "Agencia: 1234\nConta: 56789-0\nSenha Internet Banking: ****",
+          "createdAt": "2026-02-18T09:00:00.000Z",
+          "updatedAt": "2026-02-18T09:00:00.000Z"
+        },
+        {
+          "id": "item_1772291102643",
+          "title": "Netflix",
+          "description": "Email: owner@teste.com\nSenha: Netflix2026!",
+          "createdAt": "2026-02-28T15:05:02.643Z",
+          "updatedAt": "2026-02-28T15:05:02.643Z"
+        }
+      ]
+    },
+    {
+      "id": "vault_003",
+      "name": "Fotos",
+      "userId": "user_1772290000002",
+      "createdAt": "2026-02-21T08:00:00.000Z",
+      "status": "active",
+      "data": []
+    },
+    {
+      "id": "vault_1772291248276",
+      "name": "Videos Importantes",
+      "userId": "user_1772290000002",
+      "createdAt": "2026-02-28T15:07:28.276Z",
+      "status": "active",
+      "data": []
+    },
+    {
+      "id": "vault_1772303915487",
+      "name": "Senhas Bancarias",
+      "userId": "user_1772303538622",
+      "createdAt": "2026-02-28T18:38:35.487Z",
+      "status": "active",
+      "data": [
+        {
+          "id": "item_1772304050053",
+          "title": "Banco Itau",
+          "description": "Agencia: 1234 / Conta: 56789-0 / Senha: ****",
+          "createdAt": "2026-02-28T18:40:50.053Z",
+          "updatedAt": "2026-02-28T18:40:50.053Z"
+        }
+      ]
+    }
+  ],
+  "activityLogs": [
+    {
+      "id": "log_1772302969198",
+      "userId": "user_1772289231337",
+      "action": "LOGIN",
+      "details": "Login efetuado",
+      "ip": "127.0.0.1",
+      "timestamp": "2026-02-28T18:22:49.198Z"
+    },
+    {
+      "id": "log_1772303538665",
+      "userId": "user_1772303538622",
+      "action": "REGISTER",
+      "details": "Nova conta criada: businessecom2026@gmail.com",
+      "ip": "127.0.0.1",
+      "timestamp": "2026-02-28T18:32:18.665Z"
+    },
+    {
+      "id": "log_1772303597787",
+      "userId": "user_1772303538622",
+      "action": "PASSWORD_RESET_REQUEST",
+      "details": "Solicitacao de reset de senha",
+      "ip": "127.0.0.1",
+      "timestamp": "2026-02-28T18:33:17.787Z"
+    },
+    {
+      "id": "log_1772303647729",
+      "userId": "user_1772303538622",
+      "action": "PASSWORD_RESET_REQUEST",
+      "details": "Solicitacao de reset de senha",
+      "ip": "127.0.0.1",
+      "timestamp": "2026-02-28T18:34:07.729Z"
+    },
+    {
+      "id": "log_1772303799326",
+      "userId": "user_1772303538622",
+      "action": "LOGIN",
+      "details": "Login efetuado",
+      "ip": "127.0.0.1",
+      "timestamp": "2026-02-28T18:36:39.326Z"
+    }
+  ]
 }

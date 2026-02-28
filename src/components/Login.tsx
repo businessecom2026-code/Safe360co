@@ -6,11 +6,12 @@ interface LoginProps {
   onBack: () => void;
   onLoginSubmit: (email: string, password: string) => Promise<void>;
   onRegister: () => void;
+  onForgotPassword: () => void;
   lang: Language;
   error: string;
 }
 
-export function Login({ onBack, onLoginSubmit, onRegister, lang, error }: LoginProps) {
+export function Login({ onBack, onLoginSubmit, onRegister, onForgotPassword, lang, error }: LoginProps) {
   const t = translations[lang];
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -74,6 +75,16 @@ export function Login({ onBack, onLoginSubmit, onRegister, lang, error }: LoginP
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
+            </div>
+
+            <div className="text-right">
+              <button
+                type="button"
+                onClick={onForgotPassword}
+                className="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium hover:underline"
+              >
+                {lang === 'pt' ? 'Esqueceu a senha?' : lang === 'en' ? 'Forgot password?' : 'Olvido su contrasena?'}
+              </button>
             </div>
 
             <button

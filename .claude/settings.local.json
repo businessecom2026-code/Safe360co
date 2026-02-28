@@ -1,0 +1,35 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install)",
+      "Bash(where node)",
+      "Bash(where npm)",
+      "Bash(echo \"PATH: $PATH\")",
+      "Bash(cmd.exe /c \"where node 2>NUL && where npm 2>NUL\")",
+      "Bash(test -d \"C:\\\\Users\\\\Alienware\\\\Desktop\\\\Workspace-GitHub\\\\Safe360co\\\\node_modules\")",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(cmd.exe /c \"where node\")",
+      "Bash(cmd.exe /c \"where npm\")",
+      "Bash(cmd.exe /c \"where npx\")",
+      "Bash(powershell.exe -Command \"Get-Command node -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source; Get-Command npm -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source\")",
+      "Bash(powershell.exe -Command \"Get-ChildItem -Path ''C:\\\\Program Files'',''C:\\\\Program Files \\(x86\\)'',''C:\\\\Users\\\\Alienware\\\\AppData\\\\Local'',''C:\\\\Users\\\\Alienware\\\\AppData\\\\Roaming'' -Filter ''node.exe'' -Recurse -ErrorAction SilentlyContinue -Depth 5 | Select-Object -First 5 -ExpandProperty FullName\")",
+      "Bash(powershell.exe -NoProfile -Command \"Get-ChildItem ''C:\\\\Program Files'' -Filter node.exe -Recurse -Depth 4 -ErrorAction SilentlyContinue | Select -First 3 | % { $_FullName }\")",
+      "Bash(powershell.exe -NoProfile -Command \"winget install OpenJS.NodeJS.LTS --accept-source-agreements --accept-package-agreements\")",
+      "Bash(export PATH=\"/c/Program Files/nodejs:$PATH\")",
+      "Bash(node --version)",
+      "Bash(npm --version)",
+      "Bash(cygpath -w \"C:\\\\Users\\\\Alienware\\\\Desktop\\\\Workspace-GitHub\\\\Safe360co\\\\node_modules\\\\.bin\\\\tsx.cmd\")",
+      "Bash(cygpath -w -s \"/c/Program Files/nodejs/\")",
+      "Bash(# Get the actual tsx entry point cat \"\"C:\\\\Users\\\\Alienware\\\\Desktop\\\\Workspace-GitHub\\\\Safe360co\\\\node_modules\\\\tsx\\\\dist\\\\cli.mjs\"\" | head -3 || cat \"\"C:\\\\Users\\\\Alienware\\\\Desktop\\\\Workspace-GitHub\\\\Safe360co\\\\node_modules\\\\tsx\\\\dist\\\\cli.cjs\"\")",
+      "Bash(cygpath -w \"/c/Program Files/nodejs/node.exe\")",
+      "Bash(cygpath -w -s \"/c/Program Files/nodejs/node.exe\")",
+      "Bash(npx tsc --noEmit)",
+      "Bash(node -e \"const bcrypt = require\\(''bcrypt''\\); bcrypt.hash\\(''Test1234!'', 10\\).then\\(h => console.log\\(h\\)\\)\")",
+      "Bash(/c/PROGRA~1/nodejs/node.exe -e \"const bcrypt = require\\(''bcrypt''\\); bcrypt.hash\\(''Test1234!'', 10\\).then\\(h => console.log\\(h\\)\\)\")",
+      "Bash(/c/PROGRA~1/nodejs/node.exe -e \"const bcrypt = require\\(''./node_modules/bcrypt''\\); bcrypt.hash\\(''Test1234!'', 10\\).then\\(h => console.log\\(h\\)\\)\")",
+      "Bash(/c/PROGRA~1/nodejs/node.exe -e \"const bcrypt = require\\(''bcryptjs''\\); bcrypt.hash\\(''Test1234!'', 10\\).then\\(h => console.log\\(h\\)\\)\")",
+      "Bash(npm install resend)",
+      "Bash(export PATH=\"/c/Program Files/nodejs:/c/Users/Alienware/AppData/Roaming/npm:$PATH\")"
+    ]
+  }
+}

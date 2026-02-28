@@ -113,7 +113,7 @@ export function PinPad({ onComplete, savedMasterKey, onMasterKeyGenerated, onRec
 
   if (step === 'biometric') {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-4 dark bg-slate-900">
+      <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gray-50 dark:bg-slate-900">
         <div className="w-full max-w-sm text-center">
           <div className="relative inline-block mb-8">
             <div className={`w-32 h-32 rounded-full border-4 flex items-center justify-center transition-all duration-500 ${
@@ -142,7 +142,7 @@ export function PinPad({ onComplete, savedMasterKey, onMasterKeyGenerated, onRec
 
   if (step === 'recovery') {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-4 animate-in fade-in zoom-in duration-500 dark bg-slate-900">
+      <div className="min-h-screen flex flex-col items-center justify-center p-4 animate-in fade-in zoom-in duration-500 bg-gray-50 dark:bg-slate-900">
         <div className="w-full max-w-sm bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-gray-100 dark:border-slate-800 p-8">
           <button onClick={() => setStep('input')} className="mb-6 text-gray-500 hover:text-gray-700 dark:hover:text-white flex items-center gap-2 text-sm">
             <ArrowLeft size={16} /> {lang === 'pt' ? 'Voltar' : lang === 'en' ? 'Back' : 'Volver'}
@@ -183,7 +183,7 @@ export function PinPad({ onComplete, savedMasterKey, onMasterKeyGenerated, onRec
 
   if (step === 'master-key') {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-4 animate-in fade-in zoom-in duration-500 dark bg-slate-900">
+      <div className="min-h-screen flex flex-col items-center justify-center p-4 animate-in fade-in zoom-in duration-500 bg-gray-50 dark:bg-slate-900">
         <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-gray-100 dark:border-slate-800 overflow-hidden transition-colors duration-300 p-8 relative">
           
           {/* Email Alert */}
@@ -233,7 +233,7 @@ export function PinPad({ onComplete, savedMasterKey, onMasterKeyGenerated, onRec
   const currentDisplayPin = step === 'reset-pin' ? newPin : pin;
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4 animate-in fade-in zoom-in duration-500 dark bg-slate-900 overflow-hidden">
+    <div className="min-h-screen flex flex-col items-center justify-center p-4 animate-in fade-in zoom-in duration-500 bg-gray-50 dark:bg-slate-900 overflow-hidden">
       <div className="w-full max-w-sm bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-gray-100 dark:border-slate-800 overflow-hidden transition-colors duration-300 p-8">
         <div className="text-center mb-6">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 mb-6 relative">

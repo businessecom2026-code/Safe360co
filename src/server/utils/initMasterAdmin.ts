@@ -42,6 +42,9 @@ export async function initMasterAdmin() {
       email: MASTER_ADMIN_EMAIL,
       password: hashedPassword,
       role: 'master',
+      plan: 'Scale',
+      createdAt: new Date().toISOString(),
+      planExpiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
     };
 
     users.push(newMasterAdmin);
