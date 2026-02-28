@@ -1,8 +1,21 @@
 node_modules/
-build/
 dist/
+build/
 coverage/
 .DS_Store
 *.log
-.env*
+
+# Environment files (NEVER commit secrets)
+.env
+.env.local
+.env.production
 !.env.example
+
+# Replit
+.cache/
+.config/
+.upm/
+
+# OS files
+Thumbs.db
+.DS_Store

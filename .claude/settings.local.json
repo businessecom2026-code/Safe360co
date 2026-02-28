@@ -29,7 +29,9 @@
       "Bash(/c/PROGRA~1/nodejs/node.exe -e \"const bcrypt = require\\(''./node_modules/bcrypt''\\); bcrypt.hash\\(''Test1234!'', 10\\).then\\(h => console.log\\(h\\)\\)\")",
       "Bash(/c/PROGRA~1/nodejs/node.exe -e \"const bcrypt = require\\(''bcryptjs''\\); bcrypt.hash\\(''Test1234!'', 10\\).then\\(h => console.log\\(h\\)\\)\")",
       "Bash(npm install resend)",
-      "Bash(export PATH=\"/c/Program Files/nodejs:/c/Users/Alienware/AppData/Roaming/npm:$PATH\")"
+      "Bash(export PATH=\"/c/Program Files/nodejs:/c/Users/Alienware/AppData/Roaming/npm:$PATH\")",
+      "Bash(npm run build)",
+      "Bash(NODE_ENV=production timeout 8 npx tsx server.ts)"
     ]
   }
 }
