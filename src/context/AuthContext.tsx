@@ -67,7 +67,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return true; // Indicate success
     } catch (error) {
       setAuthError((error as Error).message);
-      console.error(error);
+      // Error stored in authError state
       return false; // Indicate failure
     }
   };
@@ -88,7 +88,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return true; // Indicate success
     } catch (error) {
       setAuthError((error as Error).message);
-      console.error(error);
+      // Error stored in authError state
       return false; // Indicate failure
     }
   };

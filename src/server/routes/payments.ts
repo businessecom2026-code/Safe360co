@@ -8,12 +8,12 @@ const REVOLUT_API_URL = process.env.REVOLUT_ENV === 'sandbox'
   ? 'https://sandbox-merchant.revolut.com/api/1.0'
   : 'https://merchant.revolut.com/api/1.0';
 
-if (!REVOLUT_SECRET_KEY) {
-  console.warn('⚠️  REVOLUT_SECRET_KEY not set in .env — payments will fail');
-}
-
 // Create a payment order via Revolut Merchant API
 router.post('/create-order', paymentRateLimiter, async (req, res) => {
+  if (!REVOLUT_SECRET_KEY) {
+    return res.status(503).json({ message: 'Payment service not configured' });
+  }
+
   const { amount, currency, description } = req.body;
 
   if (!amount || !currency) {
@@ -40,12 +40,10 @@ router.post('/create-order', paymentRateLimiter, async (req, res) => {
 
     if (!response.ok) {
       const error = await response.json();
-      console.error('Revolut API error:', error);
       return res.status(response.status).json({ message: 'Failed to create payment order', error });
     }
 
     const order = await response.json();
-    console.log('Revolut order created:', order.id, order.public_id);
 
     res.json({
       orderId: order.id,
@@ -53,8 +51,7 @@ router.post('/create-order', paymentRateLimiter, async (req, res) => {
       amount: order.amount,
       currency: order.currency,
     });
-  } catch (error) {
-    console.error('Error creating Revolut order:', error);
+  } catch {
     res.status(500).json({ message: 'Internal server error' });
   }
 });

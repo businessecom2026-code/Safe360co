@@ -9,8 +9,6 @@ interface SettingsProps {
   currentPlan: 'free' | 'pro' | 'scale';
   isProcessing: boolean;
   onUpgrade: () => void;
-  onResetPlan: () => void;
-  onSwitchToAdmin: () => void;
   transactions: { id: string; description: string; amount: string; date: string; icon: 'credit-card' | 'receipt' }[];
   activityLogs: { id: string; time: string; message: string }[];
 }
@@ -21,7 +19,7 @@ export const PRICES = {
   discount: 0.10
 };
 
-export const SettingsModal = ({ masterKey, userPin, onLogout, onPinChange, currentPlan, isProcessing, onUpgrade, onResetPlan, onSwitchToAdmin, transactions, activityLogs }: SettingsProps) => {
+export const SettingsModal = ({ masterKey, userPin, onLogout, onPinChange, currentPlan, isProcessing, onUpgrade, transactions, activityLogs }: SettingsProps) => {
   const [isDark, setIsDark] = useState(false);
   const [showPinConfirm, setShowPinConfirm] = useState(false);
   const [showMasterKey, setShowMasterKey] = useState(false);
@@ -108,7 +106,7 @@ export const SettingsModal = ({ masterKey, userPin, onLogout, onPinChange, curre
         items: localStorage.getItem('safe360_items') ? JSON.parse(localStorage.getItem('safe360_items')!) : [],
         extraUsers: guests,
         userPlan: currentPlan,
-        masterKey: masterKey, // Apenas para referência, não descriptografa
+        exportedAt: new Date().toISOString(),
       };
 
       const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
@@ -148,7 +146,7 @@ export const SettingsModal = ({ masterKey, userPin, onLogout, onPinChange, curre
         }
       } catch (error) {
         showToast('Erro ao ler o arquivo de backup.', 'error');
-        console.error("Erro ao importar backup:", error);
+        // silent error handling
       }
     };
     reader.readAsText(file);
@@ -498,16 +496,10 @@ export const SettingsModal = ({ masterKey, userPin, onLogout, onPinChange, curre
             <AlertTriangle size={16} />
             Limpar Cache do App
           </button>
-          
-          {/* Botão de Reset Temporário (Dev Only) */}
-          <button onClick={onResetPlan} className="w-full flex items-center justify-center py-2 text-[10px] font-medium text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors mt-4">
-            Resetar para Plano FREE (Dev Only)
-          </button>
-          
-          {/* Botão de Switch para Admin (Dev Only) */}
-          <button onClick={onSwitchToAdmin} className="w-full flex items-center justify-center py-2 text-[10px] font-medium text-blue-400 hover:text-blue-600 transition-colors mt-2">
-            Forçar Modo Administrador (Dev Only)
-          </button>
+
+          <p className="text-center text-[10px] text-slate-400 mt-6">
+            Safe360 v1.0.0
+          </p>
         </div>
       </div>
 

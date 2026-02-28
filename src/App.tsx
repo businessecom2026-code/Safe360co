@@ -4,22 +4,36 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect } from 'react';
-import { AuthProvider, useAuth } from './context/AuthContext';
+import { useState, useEffect, lazy, Suspense } from 'react';
+import { useAuth } from './context/AuthContext';
 import { useToast } from './context/ToastContext';
 import { Navbar } from './components/Navbar';
 import { Hero } from './components/Hero';
-import { Pricing } from './components/Pricing';
 import { Footer } from './components/Footer';
 import { Register } from './components/Register';
 import { Login } from './components/Login';
-import { PinPad } from './components/PinPad';
-import { Dashboard } from './components/Dashboard';
-import { AdminConsole } from './components/AdminConsole';
-import { InviteLandingPage } from './components/InviteLandingPage';
-import { ForgotPassword } from './components/ForgotPassword';
 import { Language } from './translations';
 import { User } from './types';
+
+// ─── Lazy-loaded components (loaded on demand) ───
+const PinPad = lazy(() => import('./components/PinPad'));
+const Dashboard = lazy(() => import('./components/Dashboard'));
+const AdminConsole = lazy(() => import('./components/AdminConsole'));
+const Pricing = lazy(() => import('./components/Pricing'));
+const InviteLandingPage = lazy(() => import('./components/InviteLandingPage'));
+const ForgotPassword = lazy(() => import('./components/ForgotPassword'));
+
+// ─── Loading fallback ───
+function LoadingScreen() {
+  return (
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center">
+      <div className="text-center">
+        <div className="w-10 h-10 border-3 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+        <p className="text-sm text-slate-400 font-medium">Carregando...</p>
+      </div>
+    </div>
+  );
+}
 
 export default function App() {
   const { user, token, lang, authError, t, handleLogin, handleRegister, handleLogout, setLang } = useAuth();
@@ -109,31 +123,33 @@ export default function App() {
   // Invite acceptance view
   if (currentView === 'inviteAccept' && inviteToken && inviteData) {
     return (
-      <InviteLandingPage
-        adminName={inviteData.adminName}
-        sharedVaults={['Cofres Compartilhados']}
-        onActivate={async (pin: string) => {
-          try {
-            const response = await fetch(`/api/auth/invite/${inviteToken}/activate`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ pin }),
-            });
-            if (response.ok) {
-              const data = await response.json();
-              localStorage.setItem(`safe360_${data.user.id}_token`, data.token);
-              localStorage.setItem(`safe360_${data.user.id}_user`, JSON.stringify(data.user));
-              localStorage.setItem('safe360_lastUserId', data.user.id);
-              window.location.hash = '';
-              window.location.reload();
-            } else {
-              showToast('Erro ao ativar conta. Tente novamente.', 'error');
+      <Suspense fallback={<LoadingScreen />}>
+        <InviteLandingPage
+          adminName={inviteData.adminName}
+          sharedVaults={['Cofres Compartilhados']}
+          onActivate={async (pin: string) => {
+            try {
+              const response = await fetch(`/api/auth/invite/${inviteToken}/activate`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ pin }),
+              });
+              if (response.ok) {
+                const data = await response.json();
+                localStorage.setItem(`safe360_${data.user.id}_token`, data.token);
+                localStorage.setItem(`safe360_${data.user.id}_user`, JSON.stringify(data.user));
+                localStorage.setItem('safe360_lastUserId', data.user.id);
+                window.location.hash = '';
+                window.location.reload();
+              } else {
+                showToast('Erro ao ativar conta. Tente novamente.', 'error');
+              }
+            } catch {
+              showToast('Erro de conexao.', 'error');
             }
-          } catch {
-            showToast('Erro de conexao.', 'error');
-          }
-        }}
-      />
+          }}
+        />
+      </Suspense>
     );
   }
 
@@ -143,30 +159,31 @@ export default function App() {
       return null;
     }
 
-    if (currentView === 'pinpad') {
-      return (
-        <PinPad
-          savedMasterKey={masterKey}
-          onMasterKeyGenerated={(key) => setMasterKey(key)}
-          onRecoveryInitiated={() => setRecoveryInitiated(true)}
-          onComplete={(pin) => {
-            setUserPin(pin);
-            setCurrentView('dashboard');
-          }}
-          lang={lang}
-        />
-      );
-    } else if (currentView === 'adminConsole' && user?.role === 'master') {
-      return (
-        <AdminConsole onLogout={handleLogout} onBack={() => setCurrentView('dashboard')} />
-      );
-    }
     return (
-      <Dashboard
-        onLogout={handleLogout}
-        onAdminConsole={user?.role === 'master' ? () => setCurrentView('adminConsole') : undefined}
-        user={user}
-      />
+      <Suspense fallback={<LoadingScreen />}>
+        {currentView === 'pinpad' && (
+          <PinPad
+            savedMasterKey={masterKey}
+            onMasterKeyGenerated={(key) => setMasterKey(key)}
+            onRecoveryInitiated={() => setRecoveryInitiated(true)}
+            onComplete={(pin) => {
+              setUserPin(pin);
+              setCurrentView('dashboard');
+            }}
+            lang={lang}
+          />
+        )}
+        {currentView === 'adminConsole' && user?.role === 'master' && (
+          <AdminConsole onLogout={handleLogout} onBack={() => setCurrentView('dashboard')} />
+        )}
+        {currentView === 'dashboard' && (
+          <Dashboard
+            onLogout={handleLogout}
+            onAdminConsole={user?.role === 'master' ? () => setCurrentView('adminConsole') : undefined}
+            user={user}
+          />
+        )}
+      </Suspense>
     );
   }
 
@@ -185,7 +202,9 @@ export default function App() {
         {currentView === 'landing' && (
           <>
             <Hero onStart={() => setCurrentView('register')} lang={lang} />
-            <Pricing lang={lang} onRegister={() => setCurrentView('register')} />
+            <Suspense fallback={<div className="py-20 text-center text-slate-400">Carregando planos...</div>}>
+              <Pricing lang={lang} onRegister={() => setCurrentView('register')} />
+            </Suspense>
           </>
         )}
         {currentView === 'register' && (
@@ -217,24 +236,26 @@ export default function App() {
           />
         )}
         {currentView === 'forgotPassword' && (
-          <ForgotPassword
-            onBack={() => {
-              setResetToken(null);
-              setResetEmail(null);
-              window.location.hash = '';
-              setCurrentView('login');
-            }}
-            onSuccess={() => {
-              setResetToken(null);
-              setResetEmail(null);
-              window.location.hash = '';
-              showToast('Senha redefinida! Faca login com a nova senha.', 'success');
-              setCurrentView('login');
-            }}
-            lang={lang}
-            resetToken={resetToken}
-            resetEmail={resetEmail}
-          />
+          <Suspense fallback={<LoadingScreen />}>
+            <ForgotPassword
+              onBack={() => {
+                setResetToken(null);
+                setResetEmail(null);
+                window.location.hash = '';
+                setCurrentView('login');
+              }}
+              onSuccess={() => {
+                setResetToken(null);
+                setResetEmail(null);
+                window.location.hash = '';
+                showToast('Senha redefinida! Faca login com a nova senha.', 'success');
+                setCurrentView('login');
+              }}
+              lang={lang}
+              resetToken={resetToken}
+              resetEmail={resetEmail}
+            />
+          </Suspense>
         )}
       </main>
       <Footer lang={lang} />

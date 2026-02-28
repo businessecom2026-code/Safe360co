@@ -40,8 +40,21 @@ export function Dashboard({ onLogout, onAdminConsole, user }: DashboardProps) {
 
   // Settings view
   const [showSettings, setShowSettings] = useState(false);
-  const [userPin, setUserPin] = useState(() => localStorage.getItem('safe360_pin') || '1234');
-  const [masterKey] = useState(() => localStorage.getItem('safe360_masterKey') || 'SAFE-0000-0000');
+  const [userPin, setUserPin] = useState(() => {
+    const saved = localStorage.getItem('safe360_pin');
+    if (saved) return saved;
+    const randomPin = Math.floor(100000 + Math.random() * 900000).toString();
+    localStorage.setItem('safe360_pin', randomPin);
+    return randomPin;
+  });
+  const [masterKey] = useState(() => {
+    const saved = localStorage.getItem('safe360_masterKey');
+    if (saved) return saved;
+    const seg = () => Math.random().toString(36).substring(2, 6).toUpperCase();
+    const key = `SAFE-${seg()}-${seg()}-${seg()}`;
+    localStorage.setItem('safe360_masterKey', key);
+    return key;
+  });
 
   // Add item modal
   const [showAddItem, setShowAddItem] = useState(false);
@@ -362,17 +375,6 @@ export function Dashboard({ onLogout, onAdminConsole, user }: DashboardProps) {
                 }
               }, () => showToast('Pagamento cancelado.', 'error'));
             }}
-            onResetPlan={async () => {
-              try {
-                await fetch('/api/auth/upgrade', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                  body: JSON.stringify({ plan: 'Free' }),
-                });
-                window.location.reload();
-              } catch { /* silent */ }
-            }}
-            onSwitchToAdmin={() => onAdminConsole?.()}
             transactions={[]}
             activityLogs={[]}
           />
@@ -841,3 +843,5 @@ export function Dashboard({ onLogout, onAdminConsole, user }: DashboardProps) {
     </div>
   );
 }
+
+export default Dashboard;

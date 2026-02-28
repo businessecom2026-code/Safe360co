@@ -159,3 +159,5 @@ export const InviteLandingPage = ({
     </div>
   );
 };
+
+export default InviteLandingPage;

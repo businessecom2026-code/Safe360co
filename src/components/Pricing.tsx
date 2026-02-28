@@ -330,3 +330,5 @@ export function Pricing({ lang, onRegister }: PricingProps) {
     </section>
   );
 }
+
+export default Pricing;

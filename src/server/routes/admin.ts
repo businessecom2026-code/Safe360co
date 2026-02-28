@@ -1,31 +1,8 @@
 import express from 'express';
-import fs from 'fs/promises';
-import path from 'path';
-import { fileURLToPath } from 'url';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
-import { User } from '../../types';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const dbPath = path.resolve(__dirname, '../../../db.json');
+import { getUsers, getVaults, updateUser } from '../database/db';
 
 const router = express.Router();
-
-async function readDb(): Promise<{ users: User[], vaults: any[] }> {
-  try {
-    const data = await fs.readFile(dbPath, 'utf-8');
-    return JSON.parse(data);
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-      return { users: [], vaults: [] };
-    }
-    throw error;
-  }
-}
-
-async function writeDb(db: { users: User[], vaults: any[] }): Promise<void> {
-  await fs.writeFile(dbPath, JSON.stringify(db, null, 2));
-}
 
 const STORAGE_LIMITS: Record<string, number> = {
   Free: 200,
@@ -42,9 +19,8 @@ router.get('/clients', authMiddleware, async (req: AuthRequest, res) => {
   }
 
   try {
-    const db = await readDb();
-    const users = db.users || [];
-    const vaults = db.vaults || [];
+    const users = await getUsers();
+    const vaults = await getVaults();
 
     const admins = users.filter(u => u.role === 'admin' || u.role === 'master');
     const guests = users.filter(u => u.role === 'guest');
@@ -83,8 +59,7 @@ router.get('/clients', authMiddleware, async (req: AuthRequest, res) => {
     });
 
     res.json(clientsData);
-  } catch (error) {
-    console.error('Error fetching clients:', error);
+  } catch {
     res.status(500).json({ message: 'Internal server error' });
   }
 });
@@ -105,30 +80,17 @@ router.put('/clients/:id/plan', authMiddleware, async (req: AuthRequest, res) =>
   }
 
   try {
-    const db = await readDb();
-    const userIndex = db.users.findIndex(u => u.id === id);
+    const updates: Record<string, string> = { plan };
+    if (planExpiresAt) updates.planExpiresAt = planExpiresAt;
 
-    if (userIndex === -1) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-
-    db.users[userIndex].plan = plan;
-    if (planExpiresAt) {
-      db.users[userIndex].planExpiresAt = planExpiresAt;
-    }
-
-    await writeDb(db);
+    const updated = await updateUser(id, updates);
+    if (!updated) return res.status(404).json({ message: 'User not found' });
 
     res.json({
       message: 'Plan updated successfully',
-      user: {
-        id,
-        plan,
-        planExpiresAt: db.users[userIndex].planExpiresAt,
-      },
+      user: { id, plan, planExpiresAt: updated.planExpiresAt },
     });
-  } catch (error) {
-    console.error('Error updating plan:', error);
+  } catch {
     res.status(500).json({ message: 'Internal server error' });
   }
 });

@@ -17,22 +17,16 @@ export async function sendInviteEmail(guestEmail: string, adminEmail: string, in
   const { subject, html } = inviteGuestEmail({ guestEmail, adminEmail, inviteLink });
 
   try {
-    const { data, error } = await resend.emails.send({
+    const { error } = await resend.emails.send({
       from: FROM,
       to: guestEmail,
       subject,
       html,
     });
 
-    if (error) {
-      console.error('[Email] Failed to send invite email:', error);
-      return false;
-    }
-
-    console.log(`[Email] Invite sent to ${guestEmail} (id: ${data?.id})`);
+    if (error) return false;
     return true;
-  } catch (err) {
-    console.error('[Email] Error sending invite:', err);
+  } catch {
     return false;
   }
 }
@@ -43,22 +37,16 @@ export async function sendPasswordResetEmail(email: string, resetToken: string):
   const { subject, html } = passwordResetEmail({ email, resetLink });
 
   try {
-    const { data, error } = await resend.emails.send({
+    const { error } = await resend.emails.send({
       from: FROM,
       to: email,
       subject,
       html,
     });
 
-    if (error) {
-      console.error('[Email] Failed to send reset email:', error);
-      return false;
-    }
-
-    console.log(`[Email] Reset email sent to ${email} (id: ${data?.id})`);
+    if (error) return false;
     return true;
-  } catch (err) {
-    console.error('[Email] Error sending reset email:', err);
+  } catch {
     return false;
   }
 }
@@ -69,22 +57,16 @@ export async function sendWelcomeEmail(email: string): Promise<boolean> {
   const { subject, html } = welcomeEmail({ email, loginLink });
 
   try {
-    const { data, error } = await resend.emails.send({
+    const { error } = await resend.emails.send({
       from: FROM,
       to: email,
       subject,
       html,
     });
 
-    if (error) {
-      console.error('[Email] Failed to send welcome email:', error);
-      return false;
-    }
-
-    console.log(`[Email] Welcome email sent to ${email} (id: ${data?.id})`);
+    if (error) return false;
     return true;
-  } catch (err) {
-    console.error('[Email] Error sending welcome email:', err);
+  } catch {
     return false;
   }
 }
@@ -95,22 +77,16 @@ export async function sendGuestActivatedNotification(adminEmail: string, guestEm
   const { subject, html } = guestActivatedEmail({ adminEmail, guestEmail, dashboardLink });
 
   try {
-    const { data, error } = await resend.emails.send({
+    const { error } = await resend.emails.send({
       from: FROM,
       to: adminEmail,
       subject,
       html,
     });
 
-    if (error) {
-      console.error('[Email] Failed to send activation notification:', error);
-      return false;
-    }
-
-    console.log(`[Email] Guest activation notified to ${adminEmail} (id: ${data?.id})`);
+    if (error) return false;
     return true;
-  } catch (err) {
-    console.error('[Email] Error sending activation notification:', err);
+  } catch {
     return false;
   }
 }
@@ -120,7 +96,7 @@ export async function sendSupportEmail(name: string, email: string, message: str
   const { subject, html } = supportContactEmail({ name, email, message });
 
   try {
-    const { data, error } = await resend.emails.send({
+    const { error } = await resend.emails.send({
       from: FROM,
       to: 'info@ecom360.co',
       replyTo: email,
@@ -128,15 +104,9 @@ export async function sendSupportEmail(name: string, email: string, message: str
       html,
     });
 
-    if (error) {
-      console.error('[Email] Failed to send support email:', error);
-      return false;
-    }
-
-    console.log(`[Email] Support message forwarded (id: ${data?.id})`);
+    if (error) return false;
     return true;
-  } catch (err) {
-    console.error('[Email] Error sending support email:', err);
+  } catch {
     return false;
   }
 }

@@ -329,3 +329,5 @@ export function PinPad({ onComplete, savedMasterKey, onMasterKeyGenerated, onRec
     </div>
   );
 }
+
+export default PinPad;

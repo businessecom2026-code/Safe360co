@@ -276,3 +276,5 @@ export function ForgotPassword({ onBack, onSuccess, lang, resetToken, resetEmail
     </div>
   );
 }
+
+export default ForgotPassword;

@@ -1,5 +1,3 @@
-import RevolutCheckout, { RevolutCheckoutInstance } from '@revolut/checkout';
-
 interface UpgradePlanCallback {
   (): void;
 }
@@ -7,6 +5,9 @@ interface UpgradePlanCallback {
 interface PaymentErrorCallback {
   (error: any): void;
 }
+
+// Revolut environment: reads from Vite env or defaults to 'sandbox'
+const REVOLUT_MODE = (import.meta.env.VITE_REVOLUT_ENV === 'prod' ? 'prod' : 'sandbox') as 'prod' | 'sandbox';
 
 export const initiateRevolutPay = (
   amount: number,
@@ -24,29 +25,26 @@ export const initiateRevolutPay = (
       if (!res.ok) throw new Error('Failed to create payment order');
       return res.json();
     })
-    .then(({ publicId }) => {
-      // 2. Initialize RevolutCheckout with the order public_id
-      return RevolutCheckout(publicId, 'prod');
+    .then(async ({ publicId }) => {
+      // 2. Dynamic import RevolutCheckout (only loaded when payment is initiated)
+      const { default: RevolutCheckout } = await import('@revolut/checkout');
+      return RevolutCheckout(publicId, REVOLUT_MODE);
     })
-    .then((instance: RevolutCheckoutInstance) => {
+    .then((instance: any) => {
       // 3. Open payment popup
       instance.payWithPopup({
         onSuccess() {
-          console.log('Pagamento concluido com sucesso!');
           onPaymentSuccess();
         },
-        onError(error) {
-          console.error('Ocorreu um erro no pagamento:', error);
+        onError(error: any) {
           onPaymentError(error);
         },
         onCancel() {
-          console.log('Pagamento cancelado pelo usuario.');
           onPaymentError({ message: 'Payment cancelled by user.' });
         }
-      } as any);
+      });
     })
     .catch(error => {
-      console.error('Falha ao iniciar pagamento:', error);
       onPaymentError(error);
     });
 };
