@@ -31,7 +31,27 @@
       "Bash(npm install resend)",
       "Bash(export PATH=\"/c/Program Files/nodejs:/c/Users/Alienware/AppData/Roaming/npm:$PATH\")",
       "Bash(npm run build)",
-      "Bash(NODE_ENV=production timeout 8 npx tsx server.ts)"
+      "Bash(NODE_ENV=production timeout 8 npx tsx server.ts)",
+      "Bash(ls -la /c/Users/Alienware/Desktop/Workspace-GitHub/Safe360co/src/server/*.ts)",
+      "Bash(cat /c/Users/Alienware/Desktop/Workspace-GitHub/Safe360co/.env*)",
+      "Bash(npm install compression)",
+      "Bash(npm install compression @types/compression)",
+      "Bash(du -h src/components/*.tsx)",
+      "Bash(grep -l \"import.*motion\" \"C:/Users/Alienware/Desktop/Workspace-GitHub/Safe360co/src/components\"/*.tsx)",
+      "Bash(wc -l \"C:/Users/Alienware/Desktop/Workspace-GitHub/Safe360co/src/components\"/*.tsx)",
+      "Bash(npm uninstall motion @google/genai better-sqlite3)",
+      "Bash(npx vite build --mode production)",
+      "Bash(npx vite build)",
+      "Bash(cmd.exe /c \"where node 2>&1 && where npm 2>&1\")",
+      "Bash(cmd.exe /c \"node --version\")",
+      "Bash(npx tsc --noEmit --esModuleInterop --moduleResolution node --module esnext --target esnext --skipLibCheck src/server/routes/admin.ts src/server/utils/initMasterAdmin.ts src/server/utils/activityLog.ts)",
+      "Bash(git stash)",
+      "Bash(git pull --rebase origin main)",
+      "Bash(git add index.html package-lock.json package.json server.ts vite.config.ts src/App.tsx src/components/Dashboard.tsx src/components/ForgotPassword.tsx src/components/InviteLandingPage.tsx src/components/PinPad.tsx src/components/Pricing.tsx src/components/SettingsModal.tsx src/context/AuthContext.tsx src/server/routes/admin.ts src/server/routes/auth.ts src/server/routes/payments.ts src/server/routes/vaults.ts src/server/utils/activityLog.ts src/server/utils/emailService.ts src/server/utils/initMasterAdmin.ts src/services/revolut.ts src/server/database/db.ts public/manifest.json public/favicon.svg)",
+      "Bash(git commit:*)",
+      "Bash(git push origin main)",
+      "Bash(git add package.json)",
+      "Bash(git add .replit)"
     ]
   }
 }
