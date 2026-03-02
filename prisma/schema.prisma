@@ -1,0 +1,127 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Users ───────────────────────────────────────────────────────────────────
+
+model User {
+  id               String    @id @default(uuid())
+  email            String    @unique
+  password         String
+  role             String    @default("admin") // 'master' | 'admin' | 'guest'
+  plan             String?   @default("Free")  // 'Free' | 'Pro' | 'Scale'
+  planExpiresAt    DateTime?
+  invitedBy        String?   // FK to User.id (not enforced — avoids circular dep)
+  inviteToken      String?   @unique
+  activated        Boolean   @default(false)
+  resetToken       String?   @unique
+  resetTokenExpiry DateTime?
+  createdAt        DateTime  @default(now())
+
+  vaults          Vault[]
+  activityLogs    ActivityLog[]
+  backupSnapshots BackupSnapshot[]
+
+  @@index([email])
+  @@index([inviteToken])
+  @@index([resetToken])
+}
+
+// ─── Vaults ──────────────────────────────────────────────────────────────────
+
+model Vault {
+  id        String   @id @default(uuid())
+  name      String
+  userId    String
+  color     String   @default("#6366f1") // folder card color (req.2)
+  status    String   @default("active")  // 'active' | 'pending'
+  createdAt DateTime @default(now())
+
+  user    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  folders Folder[]
+  items   VaultItem[]
+
+  @@index([userId])
+  @@index([userId, status])
+}
+
+// ─── Folders (nested via Adjacency List) ─────────────────────────────────────
+
+model Folder {
+  id        String   @id @default(uuid())
+  vaultId   String
+  parentId  String?  // null = root folder of vault
+  name      String
+  color     String   @default("#6366f1") // per-folder color (req.2)
+  createdAt DateTime @default(now())
+
+  // Self-referential relation — SET NULL on parent delete (children promoted to root)
+  vault    Vault     @relation(fields: [vaultId], references: [id], onDelete: Cascade)
+  parent   Folder?   @relation("FolderChildren", fields: [parentId], references: [id], onDelete: SetNull)
+  children Folder[]  @relation("FolderChildren")
+  items    VaultItem[]
+
+  @@index([vaultId])
+  @@index([vaultId, parentId]) // fast listing of folder contents
+}
+
+// ─── Vault Items ─────────────────────────────────────────────────────────────
+
+model VaultItem {
+  id           String   @id @default(uuid())
+  vaultId      String
+  folderId     String?  // null = root of vault (no folder)
+  type         String   @default("note") // 'password' | 'note' | 'media'
+  title        String
+
+  // JSONB column: stores PasswordField[] — encrypted blobs, never queried by field value
+  // Schema: [{ label: string, value: string }]  (value = AES-GCM encrypted)
+  passwords    Json     @default("[]")
+
+  note         String?  // plain note content (also encrypted client-side for sensitive data)
+  mediaRef     String?  // path/key in object storage (req.4)
+  mediaPinHash String?  // bcrypt hash of media access PIN (req.4)
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  vault  Vault   @relation(fields: [vaultId], references: [id], onDelete: Cascade)
+  folder Folder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
+
+  @@index([vaultId])
+  @@index([vaultId, folderId]) // fast folder content queries
+}
+
+// ─── Activity Logs ───────────────────────────────────────────────────────────
+
+model ActivityLog {
+  id        String   @id @default(uuid())
+  userId    String
+  action    String
+  details   String?
+  ip        String?
+  timestamp DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([timestamp]) // for admin log queries sorted by time
+}
+
+// ─── Backup Snapshots (req.8) ────────────────────────────────────────────────
+
+model BackupSnapshot {
+  id        String   @id @default(uuid())
+  userId    String
+  payload   Json     // full vault export — encrypted with user masterKey before storing
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Keep only last 7 — enforced in application layer, not DB constraint
+  @@index([userId, createdAt])
+}

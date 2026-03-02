@@ -8,8 +8,8 @@ interface AuthContextType {
   lang: Language;
   authError: string;
   t: typeof translations['pt'];
-  handleLogin: (email: string, password: string) => Promise<void>;
-  handleRegister: (email: string, password: string) => Promise<void>;
+  handleLogin: (email: string, password: string) => Promise<boolean>;
+  handleRegister: (email: string, password: string) => Promise<boolean>;
   handleLogout: () => void;
   setLang: (lang: Language) => void;
 }

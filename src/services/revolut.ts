@@ -25,10 +25,11 @@ export const initiateRevolutPay = (
       if (!res.ok) throw new Error('Failed to create payment order');
       return res.json();
     })
-    .then(async ({ publicId }) => {
+    .then(async ({ publicId, env }) => {
       // 2. Dynamic import RevolutCheckout (only loaded when payment is initiated)
+      // Use env returned by backend so client/server modes always match
       const { default: RevolutCheckout } = await import('@revolut/checkout');
-      return RevolutCheckout(publicId, REVOLUT_MODE);
+      return RevolutCheckout(publicId, env ?? REVOLUT_MODE);
     })
     .then((instance: any) => {
       // 3. Open payment popup

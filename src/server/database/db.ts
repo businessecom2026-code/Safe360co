@@ -2,9 +2,14 @@
  * ═══════════════════════════════════════════════════════════════
  *  Safe360 — Database Abstraction Layer
  * ═══════════════════════════════════════════════════════════════
- *  ALL database operations live here. When migrating to PostgreSQL
- *  (Railway, Supabase, etc), ONLY this file needs to change.
- *  The rest of the app (routes, middleware) stays the same.
+ *  CURRENT MODE: JSON file (development / Replit)
+ *
+ *  When DATABASE_URL is set (Railway), replace this file with:
+ *    cp src/server/database/db-postgres.ts src/server/database/db.ts
+ *  Then run: npx prisma migrate deploy
+ *
+ *  All exported function signatures are identical between this
+ *  file and db-postgres.ts — routes never need to change.
  * ═══════════════════════════════════════════════════════════════
  */
 
@@ -17,23 +22,43 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const dbPath = path.resolve(__dirname, '../../../db.json');
 
-// ─── Types ───
+// ─── Types ───────────────────────────────────────────────────────────────────
+
+export interface PasswordField {
+  label: string;
+  value: string; // AES-GCM encrypted — never store plaintext
+}
+
+export interface VaultItem {
+  id: string;
+  vaultId?: string;
+  folderId?: string | null;
+  type?: 'password' | 'note' | 'media';
+  title: string;
+  description: string; // legacy field — maps to note in Postgres
+  passwords?: PasswordField[];
+  note?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export interface Vault {
   id: string;
   name: string;
   userId: string;
+  color?: string;
   createdAt?: string;
   status?: 'active' | 'pending';
   data: VaultItem[];
 }
 
-export interface VaultItem {
+export interface Folder {
   id: string;
-  title: string;
-  description: string;
+  vaultId: string;
+  parentId: string | null;
+  name: string;
+  color: string;
   createdAt: string;
-  updatedAt: string;
 }
 
 export interface ActivityLogEntry {
@@ -48,10 +73,11 @@ export interface ActivityLogEntry {
 interface Database {
   users: User[];
   vaults: Vault[];
+  folders: Folder[]; // new — nested folder support
   activityLogs: ActivityLogEntry[];
 }
 
-// ─── Core Read/Write (private) ───
+// ─── Core Read/Write (private) ───────────────────────────────────────────────
 
 async function readDb(): Promise<Database> {
   try {
@@ -60,11 +86,12 @@ async function readDb(): Promise<Database> {
     return {
       users: db.users || [],
       vaults: db.vaults || [],
+      folders: db.folders || [],
       activityLogs: db.activityLogs || [],
     };
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-      return { users: [], vaults: [], activityLogs: [] };
+      return { users: [], vaults: [], folders: [], activityLogs: [] };
     }
     throw error;
   }
@@ -187,6 +214,8 @@ export async function deleteVault(vaultId: string): Promise<boolean> {
   const index = db.vaults.findIndex(v => v.id === vaultId);
   if (index === -1) return false;
   db.vaults.splice(index, 1);
+  // Cascade: remove folders and items belonging to this vault
+  db.folders = db.folders.filter(f => f.vaultId !== vaultId);
   await writeDb(db);
   return true;
 }
@@ -196,11 +225,14 @@ export async function countVaultsByUser(userId: string): Promise<number> {
   return vaults.filter(v => v.userId === userId).length;
 }
 
-// ─── Vault Items ───
+// ─── Vault Items ─────────────────────────────────────────────────────────────
 
-export async function getVaultItems(vaultId: string): Promise<VaultItem[]> {
+export async function getVaultItems(vaultId: string, folderId?: string | null): Promise<VaultItem[]> {
   const vault = await getVaultById(vaultId);
-  return vault?.data || [];
+  const items = vault?.data || [];
+  // undefined = all items; null = root items; string = specific folder
+  if (folderId === undefined) return items;
+  return items.filter(i => (i.folderId ?? null) === folderId);
 }
 
 export async function addVaultItem(vaultId: string, item: VaultItem): Promise<VaultItem | undefined> {
@@ -241,6 +273,86 @@ export async function countVaultItems(vaultId: string): Promise<number> {
 }
 
 // ════════════════════════════════════════════════════════════════
+//  FOLDERS (JSON implementation — mirrors db-postgres.ts API)
+// ════════════════════════════════════════════════════════════════
+
+export async function getFoldersByVault(vaultId: string, parentId?: string | null): Promise<Folder[]> {
+  const db = await readDb();
+  const folders = db.folders.filter(f => f.vaultId === vaultId);
+  if (parentId === undefined) return folders;
+  return folders.filter(f => f.parentId === parentId);
+}
+
+export async function getFolderById(folderId: string): Promise<Folder | undefined> {
+  const db = await readDb();
+  return db.folders.find(f => f.id === folderId);
+}
+
+export async function createFolder(folder: Omit<Folder, 'id' | 'createdAt'>): Promise<Folder> {
+  // Guard: max depth 8
+  if (folder.parentId) {
+    const depth = await getFolderDepth(folder.parentId);
+    if (depth >= 8) throw new Error('MAX_DEPTH_EXCEEDED');
+  }
+  const newFolder: Folder = {
+    id: `folder_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    createdAt: new Date().toISOString(),
+    ...folder,
+  };
+  const db = await readDb();
+  db.folders.push(newFolder);
+  await writeDb(db);
+  return newFolder;
+}
+
+export async function updateFolder(folderId: string, updates: Partial<Pick<Folder, 'name' | 'color' | 'parentId'>>): Promise<Folder | undefined> {
+  const db = await readDb();
+  const index = db.folders.findIndex(f => f.id === folderId);
+  if (index === -1) return undefined;
+  db.folders[index] = { ...db.folders[index], ...updates };
+  await writeDb(db);
+  return db.folders[index];
+}
+
+export async function deleteFolder(folderId: string): Promise<boolean> {
+  const db = await readDb();
+  const index = db.folders.findIndex(f => f.id === folderId);
+  if (index === -1) return false;
+  // Cascade children folders
+  const toDelete = collectDescendants(folderId, db.folders);
+  db.folders = db.folders.filter(f => !toDelete.has(f.id));
+  // SET NULL: items under deleted folders move to vault root
+  db.vaults.forEach(vault => {
+    vault.data?.forEach(item => {
+      if (item.folderId && toDelete.has(item.folderId)) {
+        item.folderId = null;
+      }
+    });
+  });
+  await writeDb(db);
+  return true;
+}
+
+function collectDescendants(folderId: string, allFolders: Folder[]): Set<string> {
+  const result = new Set<string>([folderId]);
+  const queue = [folderId];
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+    allFolders
+      .filter(f => f.parentId === current)
+      .forEach(child => { result.add(child.id); queue.push(child.id); });
+  }
+  return result;
+}
+
+async function getFolderDepth(folderId: string, current = 0): Promise<number> {
+  if (current > 8) return current;
+  const folder = await getFolderById(folderId);
+  if (!folder?.parentId) return current;
+  return getFolderDepth(folder.parentId, current + 1);
+}
+
+// ════════════════════════════════════════════════════════════════
 //  ACTIVITY LOGS
 // ════════════════════════════════════════════════════════════════
 
@@ -255,21 +367,17 @@ export async function logActivity(userId: string, action: string, details?: stri
       ip,
       timestamp: new Date().toISOString(),
     };
-
     db.activityLogs.push(entry);
-
-    // Keep only last 2000 logs total
     if (db.activityLogs.length > 2000) {
       db.activityLogs = db.activityLogs.slice(-2000);
     }
-
     await writeDb(db);
   } catch {
-    // Logging should never break the main flow
+    // Logging must never throw
   }
 }
 
-export async function getUserActivityLogs(userId: string, limit: number = 50): Promise<ActivityLogEntry[]> {
+export async function getUserActivityLogs(userId: string, limit = 50): Promise<ActivityLogEntry[]> {
   try {
     const db = await readDb();
     return db.activityLogs
@@ -281,7 +389,7 @@ export async function getUserActivityLogs(userId: string, limit: number = 50): P
   }
 }
 
-export async function getAllActivityLogs(limit: number = 100): Promise<ActivityLogEntry[]> {
+export async function getAllActivityLogs(limit = 100): Promise<ActivityLogEntry[]> {
   try {
     const db = await readDb();
     return db.activityLogs
@@ -293,7 +401,7 @@ export async function getAllActivityLogs(limit: number = 100): Promise<ActivityL
 }
 
 // ════════════════════════════════════════════════════════════════
-//  COMPOSITE QUERIES (used by admin console, etc)
+//  COMPOSITE (admin)
 // ════════════════════════════════════════════════════════════════
 
 export async function getFullDatabase(): Promise<Database> {

@@ -135,6 +135,40 @@
           "updatedAt": "2026-02-28T18:40:50.053Z"
         }
       ]
+    },
+    {
+      "id": "vault_1772444207534",
+      "name": "teste",
+      "userId": "user_1772289231337",
+      "createdAt": "2026-03-02T09:36:47.534Z",
+      "status": "active",
+      "data": []
+    },
+    {
+      "id": "vault_1772450051290",
+      "name": "Ecom360",
+      "userId": "user_1772289231337",
+      "createdAt": "2026-03-02T11:14:11.290Z",
+      "status": "active",
+      "data": [
+        {
+          "id": "item_1772450111823",
+          "title": "Email Ecom360",
+          "description": "Admin20269",
+          "createdAt": "2026-03-02T11:15:11.823Z",
+          "updatedAt": "2026-03-02T11:15:11.823Z"
+        }
+      ]
+    }
+  ],
+  "folders": [
+    {
+      "id": "folder_1772450061230_0bb0u",
+      "createdAt": "2026-03-02T11:14:21.230Z",
+      "vaultId": "vault_1772450051290",
+      "parentId": null,
+      "name": "Cliente 1",
+      "color": "#f59e0b"
     }
   ],
   "activityLogs": [
@@ -177,6 +211,30 @@
       "details": "Login efetuado",
       "ip": "127.0.0.1",
       "timestamp": "2026-02-28T18:36:39.326Z"
+    },
+    {
+      "id": "log_1772444193835",
+      "userId": "user_1772289231337",
+      "action": "LOGIN",
+      "details": "Login efetuado",
+      "ip": "127.0.0.1",
+      "timestamp": "2026-03-02T09:36:33.835Z"
+    },
+    {
+      "id": "log_1772449189575",
+      "userId": "user_1772289231337",
+      "action": "LOGIN",
+      "details": "Login efetuado",
+      "ip": "127.0.0.1",
+      "timestamp": "2026-03-02T10:59:49.575Z"
+    },
+    {
+      "id": "log_1772451949096",
+      "userId": "user_1772289231337",
+      "action": "LOGIN",
+      "details": "Login efetuado",
+      "ip": "127.0.0.1",
+      "timestamp": "2026-03-02T11:45:49.096Z"
     }
   ]
 }

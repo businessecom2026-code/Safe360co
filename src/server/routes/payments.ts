@@ -50,6 +50,7 @@ router.post('/create-order', paymentRateLimiter, async (req, res) => {
       publicId: order.public_id,
       amount: order.amount,
       currency: order.currency,
+      env: (process.env.REVOLUT_ENV === 'sandbox' ? 'sandbox' : 'prod') as 'prod' | 'sandbox',
     });
   } catch {
     res.status(500).json({ message: 'Internal server error' });

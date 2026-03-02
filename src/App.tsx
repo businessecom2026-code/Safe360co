@@ -10,6 +10,7 @@ import { useToast } from './context/ToastContext';
 import { Navbar } from './components/Navbar';
 import { Hero } from './components/Hero';
 import { Footer } from './components/Footer';
+import { LandingEffects } from './components/LandingEffects';
 import { Register } from './components/Register';
 import { Login } from './components/Login';
 import { Language } from './translations';
@@ -98,6 +99,13 @@ export default function App() {
     }
   }, []);
 
+  // Load persisted master key when user session is restored
+  useEffect(() => {
+    if (!user) return;
+    const stored = localStorage.getItem(`safe360_${user.id}_master_key`);
+    if (stored) setMasterKey(stored);
+  }, [user?.id]);
+
   useEffect(() => {
     if (user && !token) {
       handleLogout();
@@ -171,6 +179,7 @@ export default function App() {
               setCurrentView('dashboard');
             }}
             lang={lang}
+            userId={user?.id}
           />
         )}
         {currentView === 'adminConsole' && user?.role === 'master' && (
@@ -180,6 +189,7 @@ export default function App() {
           <Dashboard
             onLogout={handleLogout}
             onAdminConsole={user?.role === 'master' ? () => setCurrentView('adminConsole') : undefined}
+            onBackToHome={() => setCurrentView('landing')}
             user={user}
           />
         )}
@@ -201,7 +211,13 @@ export default function App() {
       <main>
         {currentView === 'landing' && (
           <>
-            <Hero onStart={() => setCurrentView('register')} lang={lang} />
+            <LandingEffects />
+            <Hero
+              onStart={() => setCurrentView('register')}
+              lang={lang}
+              isAuthenticated={!!user}
+              onOpenSafe={() => setCurrentView(userPin ? 'dashboard' : 'pinpad')}
+            />
             <Suspense fallback={<div className="py-20 text-center text-slate-400">Carregando planos...</div>}>
               <Pricing lang={lang} onRegister={() => setCurrentView('register')} />
             </Suspense>

@@ -51,7 +51,32 @@
       "Bash(git commit:*)",
       "Bash(git push origin main)",
       "Bash(git add package.json)",
-      "Bash(git add .replit)"
+      "Bash(git add .replit)",
+      "Bash(node -e \"require\\(''@prisma/client''\\)\")",
+      "Bash(npm install --save-dev prisma)",
+      "Bash(npm install @prisma/client)",
+      "Bash(npx prisma generate)",
+      "Bash(python3 -:*)",
+      "Bash(python3 /tmp/write_script.py)",
+      "Bash(python3 -c \":*)",
+      "Bash(node -e \":*)",
+      "Bash(node -e \"process.stdout.write\\(Buffer.from\\(''Y29uc3QgZnMgPSByZXF1aXJlKCdmcycpOw=='', ''base64''\\).toString\\(\\)\\)\")",
+      "Bash(node -e \"const b=Buffer.from\\(''Y29uc29sZS5sb2coImhlbGxvIik='',''base64''\\);eval\\(b.toString\\(\\)\\)\")",
+      "Bash(node -e \"console.log\\(''test \\\\u041d\\\\u043e\\\\u0432\\\\u0430''\\)\")",
+      "Bash(node -e \"console.log\\(''test z.B.''\\)\")",
+      "Bash(node -e \"var x = [\"\"a\"\", \"\"b''c\"\"]; console.log\\(x[1]\\)\")",
+      "Bash(node -e \"console.log\\(''checking for backtick issue''\\)\")",
+      "Bash(node -e \"var x = ''e.g. PIN''; console.log\\(x\\)\")",
+      "Bash(node -e \"var x = ''z.B. PIN''; console.log\\(x\\)\")",
+      "Bash(node -e \"var x = ''\\\\u041c\\\\u0456\\\\u0442\\\\u043a\\\\u0430''; console.log\\(x\\)\")",
+      "Bash(node -e \"var x = ''\\\\u0414\\\\u043e\\\\u0441\\\\u044f\\\\u0433\\\\u043d\\\\u0443\\\\u0442\\\\u043e \\\\u043c\\\\u0430\\\\u043c\\\\u0441\\\\u0438\\\\u043c\\\\u0430\\\\u043b\\\\u044c\\\\u043d\\\\u0443 \\\\u0433\\\\u043b\\\\u0438\\\\u0431\\\\u0438\\\\u043d\\\\u0443 \\\\u043f\\\\u0430\\\\u043f\\\\u043e\\\\u043a''; console.log\\(x\\)\")",
+      "Bash(node \"C:/Users/Alienware/Desktop/Workspace-GitHub/Safe360co/do_translations.cjs\")",
+      "Bash(set +H)",
+      "Bash(node -e \"console.log\\(''Copiado!''\\)\")",
+      "Bash(node -e \"console.log\\(''Copie !''\\)\")",
+      "Bash(node -e \"var x = ''Copie !''; console.log\\(x\\);\")",
+      "Bash(powershell.exe -Command \"Write-Host ''PowerShell test OK''\")",
+      "Bash(powershell.exe -Command \":*)"
     ]
   }
 }

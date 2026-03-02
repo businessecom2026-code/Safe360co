@@ -8,6 +8,7 @@ import { fileURLToPath } from 'url';
 import authRoutes from './src/server/routes/auth';
 import { authMiddleware, AuthRequest } from './src/server/middleware/auth';
 import vaultRoutes from './src/server/routes/vaults';
+import folderRoutes from './src/server/routes/folders';
 import adminRoutes from './src/server/routes/admin';
 import paymentRoutes from './src/server/routes/payments';
 import { initMasterAdmin } from './src/server/utils/initMasterAdmin';
@@ -73,6 +74,7 @@ async function startServer() {
   // ─── API Routes ───
   app.use('/api/auth', authRoutes);
   app.use('/api/vaults', vaultRoutes);
+  app.use('/api/vaults/:vaultId/folders', folderRoutes); // nested route — mergeParams enabled
   app.use('/api/admin', adminRoutes);
   app.use('/api/payments', paymentRoutes);
 

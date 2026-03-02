@@ -1,12 +1,14 @@
-import { ArrowRight, CheckCircle2 } from 'lucide-react';
+import { ArrowRight, CheckCircle2, ShieldCheck } from 'lucide-react';
 import { Language, translations } from '../translations';
 
 interface HeroProps {
   onStart: () => void;
   lang: Language;
+  isAuthenticated?: boolean;
+  onOpenSafe?: () => void;
 }
 
-export function Hero({ onStart, lang }: HeroProps) {
+export function Hero({ onStart, lang, isAuthenticated, onOpenSafe }: HeroProps) {
   const t = translations[lang];
 
   return (
@@ -30,7 +32,7 @@ export function Hero({ onStart, lang }: HeroProps) {
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button 
+            <button
               onClick={onStart}
               className="inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-xl text-lg font-semibold transition-all hover:scale-105 shadow-lg shadow-blue-600/20"
             >
@@ -38,6 +40,18 @@ export function Hero({ onStart, lang }: HeroProps) {
               <ArrowRight size={20} />
             </button>
           </div>
+
+          {isAuthenticated && onOpenSafe && (
+            <div className="mt-4 flex justify-center">
+              <button
+                onClick={onOpenSafe}
+                className="inline-flex items-center gap-2 text-sm font-semibold text-blue-500 hover:text-blue-400 dark:text-blue-400 dark:hover:text-blue-300 transition-colors underline underline-offset-4"
+              >
+                <ShieldCheck size={16} />
+                {t.hero.safeShortcut}
+              </button>
+            </div>
+          )}
 
           <div className="mt-12 flex items-center justify-center gap-8 text-sm text-gray-500 dark:text-gray-400">
             <div className="flex items-center gap-2">

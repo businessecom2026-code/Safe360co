@@ -59,9 +59,16 @@ export function Navbar({ onLogin, lang, setLang, user, onAdminConsole, onDashboa
                 onChange={(e) => setLang(e.target.value as Language)}
                 className="bg-transparent text-xs font-medium text-gray-700 dark:text-gray-300 outline-none cursor-pointer pr-1"
               >
-                <option value="pt">PT</option>
-                <option value="en">EN</option>
-                <option value="es">ES</option>
+                <option value="pt">🇧🇷 PT-BR</option>
+                <option value="ptPT">🇵🇹 PT-PT</option>
+                <option value="en">🇺🇸 EN</option>
+                <option value="enGB">🇬🇧 EN-GB</option>
+                <option value="es">🇪🇸 ES</option>
+                <option value="it">🇮🇹 IT</option>
+                <option value="zh">🇨🇳 中文</option>
+                <option value="fr">🇫🇷 FR</option>
+                <option value="de">🇩🇪 DE</option>
+                <option value="uk">🇺🇦 UA</option>
               </select>
             </div>
             <ThemeToggle />
@@ -130,9 +137,16 @@ export function Navbar({ onLogin, lang, setLang, user, onAdminConsole, onDashboa
               onChange={(e) => setLang(e.target.value as Language)}
               className="bg-gray-100 dark:bg-slate-800 text-sm font-medium text-gray-700 dark:text-gray-300 rounded-lg px-2 py-1 outline-none"
             >
-              <option value="pt">Portugues</option>
-              <option value="en">English</option>
-              <option value="es">Espanol</option>
+              <option value="pt">🇧🇷 Português (BR)</option>
+              <option value="ptPT">🇵🇹 Português (PT)</option>
+              <option value="en">🇺🇸 English</option>
+              <option value="enGB">🇬🇧 English (UK)</option>
+              <option value="es">🇪🇸 Español</option>
+              <option value="it">🇮🇹 Italiano</option>
+              <option value="zh">🇨🇳 中文</option>
+              <option value="fr">🇫🇷 Français</option>
+              <option value="de">🇩🇪 Deutsch</option>
+              <option value="uk">🇺🇦 Українська</option>
             </select>
           </div>
           <div className="pt-2 border-t border-gray-100 dark:border-slate-800">
