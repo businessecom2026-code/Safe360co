@@ -3,10 +3,22 @@ import { Language, translations } from '../translations';
 
 interface FooterProps {
   lang: Language;
+  onNavigate?: (view: 'product' | 'legal' | 'landing') => void;
 }
 
-export function Footer({ lang }: FooterProps) {
+export function Footer({ lang, onNavigate }: FooterProps) {
   const t = translations[lang];
+
+  const link = (label: string, target: 'product' | 'legal' | 'landing') => (
+    <li>
+      <button
+        onClick={() => onNavigate?.(target)}
+        className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+      >
+        {label}
+      </button>
+    </li>
+  );
 
   return (
     <footer className="bg-white dark:bg-slate-950 border-t border-gray-200 dark:border-slate-800 transition-colors duration-300">
@@ -23,28 +35,28 @@ export function Footer({ lang }: FooterProps) {
               {t.hero.subtitle}
             </p>
           </div>
-          
+
           <div>
             <h4 className="font-semibold text-gray-900 dark:text-white mb-4">
-              {lang === 'pt' ? 'Produto' : lang === 'en' ? 'Product' : 'Producto'}
+              {t.footer.product}
             </h4>
             <ul className="space-y-2 text-sm text-gray-500 dark:text-gray-400">
-              <li><a href="#" className="hover:text-blue-600 dark:hover:text-blue-400">Features</a></li>
-              <li><a href="#" className="hover:text-blue-600 dark:hover:text-blue-400">{lang === 'pt' ? 'Preços' : lang === 'en' ? 'Pricing' : 'Precios'}</a></li>
-              <li><a href="#" className="hover:text-blue-600 dark:hover:text-blue-400">{lang === 'pt' ? 'Segurança' : lang === 'en' ? 'Security' : 'Seguridad'}</a></li>
+              {link('Features', 'product')}
+              {link(t.footer.pricing, 'product')}
+              {link(t.footer.security, 'product')}
             </ul>
           </div>
-          
+
           <div>
             <h4 className="font-semibold text-gray-900 dark:text-white mb-4">Legal</h4>
             <ul className="space-y-2 text-sm text-gray-500 dark:text-gray-400">
-              <li><a href="#" className="hover:text-blue-600 dark:hover:text-blue-400">{lang === 'pt' ? 'Privacidade' : lang === 'en' ? 'Privacy' : 'Privacidad'}</a></li>
-              <li><a href="#" className="hover:text-blue-600 dark:hover:text-blue-400">{lang === 'pt' ? 'Termos' : lang === 'en' ? 'Terms' : 'Términos'}</a></li>
-              <li><a href="#" className="hover:text-blue-600 dark:hover:text-blue-400">LGPD / GDPR</a></li>
+              {link(t.footer.privacy, 'legal')}
+              {link(t.footer.terms, 'legal')}
+              {link('LGPD / GDPR', 'legal')}
             </ul>
           </div>
         </div>
-        
+
         <div className="pt-8 border-t border-gray-100 dark:border-slate-800 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-sm text-gray-500 dark:text-gray-400">
             © {new Date().getFullYear()} Safe360. Powered by <a href="https://ecom360.co" className="text-blue-600 dark:text-blue-400 hover:underline">Ecom360.co</a>
@@ -52,7 +64,7 @@ export function Footer({ lang }: FooterProps) {
           <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 bg-green-50 dark:bg-green-900/20 px-3 py-1 rounded-full border border-green-100 dark:border-green-900/30">
             <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse"></div>
             <span className="font-medium text-green-700 dark:text-green-400">
-              {lang === 'pt' ? 'Em conformidade com GDPR (EU) e LGPD (BR)' : lang === 'en' ? 'GDPR (EU) and LGPD (BR) compliant' : 'Cumple con GDPR (UE) y LGPD (BR)'}
+              {t.common.compliance}
             </span>
           </div>
         </div>

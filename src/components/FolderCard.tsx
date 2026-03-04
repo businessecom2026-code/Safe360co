@@ -1,5 +1,35 @@
-import { Folder as FolderIcon, Trash2, ChevronRight } from 'lucide-react';
+import {
+  Folder as FolderIcon, FolderOpen, Trash2, ChevronRight, Pencil,
+  Star, Heart, Shield, Bookmark, Key, Lock, Globe, Home,
+  User, Briefcase, CreditCard, FileText, Image, Code,
+} from 'lucide-react';
+import type { LucideProps } from 'lucide-react';
 import { Folder } from '../server/database/db';
+
+// ─── Icon registry ────────────────────────────────────────────────────────────
+
+export const FOLDER_ICON_MAP: Record<string, React.FC<LucideProps>> = {
+  Folder:     FolderIcon,
+  FolderOpen,
+  Star,
+  Heart,
+  Shield,
+  Bookmark,
+  Key,
+  Lock,
+  Globe,
+  Home,
+  User,
+  Briefcase,
+  CreditCard,
+  FileText,
+  Image,
+  Code,
+};
+
+export const FOLDER_ICON_KEYS = Object.keys(FOLDER_ICON_MAP) as (keyof typeof FOLDER_ICON_MAP)[];
+
+// ─── FolderCard ───────────────────────────────────────────────────────────────
 
 interface FolderCardProps {
   folder: Folder;
@@ -8,10 +38,12 @@ interface FolderCardProps {
   isActive?: boolean;
   onOpen: (folder: Folder) => void;
   onColorChange: (folderId: string, hex: string) => void;
-  onDelete: (folderId: string) => void;
+  onDelete?: (folderId: string) => void;
+  onEdit?: (folder: Folder) => void;
   tVault: {
     folderColor: string;
     folderEmpty: string;
+    folderEdit?: string;
   };
 }
 
@@ -23,9 +55,11 @@ export function FolderCard({
   onOpen,
   onColorChange,
   onDelete,
+  onEdit,
   tVault,
 }: FolderCardProps) {
   const totalCount = itemCount + childCount;
+  const IconComponent = FOLDER_ICON_MAP[folder.icon ?? 'Folder'] ?? FolderIcon;
 
   return (
     <div
@@ -42,12 +76,12 @@ export function FolderCard({
         style={{ backgroundColor: folder.color }}
       />
 
-      {/* Color dot + icon */}
+      {/* Icon */}
       <div
         className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
         style={{ backgroundColor: `${folder.color}22` }}
       >
-        <FolderIcon size={16} style={{ color: folder.color }} />
+        <IconComponent size={16} style={{ color: folder.color }} />
       </div>
 
       {/* Name + count */}
@@ -60,7 +94,19 @@ export function FolderCard({
 
       {/* Actions (visible on hover) */}
       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
-        {/* Color picker */}
+
+        {/* Edit */}
+        {onEdit && (
+          <button
+            onClick={() => onEdit(folder)}
+            className="p-1 rounded text-slate-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+            title={tVault.folderEdit ?? 'Edit'}
+          >
+            <Pencil size={12} />
+          </button>
+        )}
+
+        {/* Color picker (quick-change, kept for backwards compat) */}
         <label
           className="p-1 rounded cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
           title={tVault.folderColor}
@@ -75,12 +121,14 @@ export function FolderCard({
         </label>
 
         {/* Delete */}
-        <button
-          onClick={() => onDelete(folder.id)}
-          className="p-1 rounded text-slate-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-        >
-          <Trash2 size={12} />
-        </button>
+        {onDelete && (
+          <button
+            onClick={() => onDelete(folder.id)}
+            className="p-1 rounded text-slate-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+          >
+            <Trash2 size={12} />
+          </button>
+        )}
       </div>
 
       {/* Chevron */}

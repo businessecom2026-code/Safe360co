@@ -67,6 +67,12 @@ async function startServer() {
   app.use(compression());
 
   app.use(cors());
+
+  // ─── Revolut webhook: raw body ONLY for this path (BEFORE bodyParser.json) ───
+  // express.raw() here captures the Buffer needed for HMAC-SHA256 signature validation.
+  // bodyParser.json() skips re-parsing if req.body is already set (Buffer counts as set).
+  app.use('/api/payments/webhook', express.raw({ type: 'application/json' }));
+
   app.use(bodyParser.json({ limit: '10mb' }));
   app.use(sanitizeInput);
   app.use('/api', rateLimiter(60, 60 * 1000)); // 60 req/min global for API

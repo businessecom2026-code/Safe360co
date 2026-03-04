@@ -1,6 +1,7 @@
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 import { User } from '../types';
 import { Language, translations } from '../translations';
+import { getPersistedLanguage, persistLanguage, resolveInitialLanguage, HTML_LANG_MAP } from '../utils/detectLanguage';
 
 interface AuthContextType {
   user: User | null;
@@ -23,10 +24,32 @@ const getLocalStorageKey = (key: string, userId?: string | null) => {
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [token, setToken] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
-  const [lang, setLang] = useState<Language>('pt');
+  const [lang, setLangState] = useState<Language>(() => {
+    // Try new key first, then legacy key
+    return getPersistedLanguage()
+      || (() => {
+        const legacy = localStorage.getItem('safe360_lang') as Language | null;
+        const valid: Language[] = ['pt','ptPT','en','enGB','es','it','zh','fr','de','uk'];
+        return legacy && valid.includes(legacy) ? legacy : null;
+      })()
+      || 'en';
+  });
   const [authError, setAuthError] = useState<string>('');
 
   const t = translations[lang];
+
+  // Auto-detect language by IP on first visit (when nothing is persisted)
+  useEffect(() => {
+    if (!getPersistedLanguage()) {
+      resolveInitialLanguage().then(detected => {
+        setLangState(detected);
+        persistLanguage(detected);
+        document.documentElement.lang = HTML_LANG_MAP[detected];
+      });
+    } else {
+      document.documentElement.lang = HTML_LANG_MAP[lang];
+    }
+  }, []);
 
   useEffect(() => {
     // Load initial state from localStorage based on a potential last active user
@@ -103,6 +126,45 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUser(null);
     setAuthError('');
   };
+
+  const setLang = (l: Language) => {
+    persistLanguage(l);
+    document.documentElement.lang = HTML_LANG_MAP[l];
+    setLangState(l);
+  };
+
+  // ─── Idle auto-lock ───────────────────────────────────────────────────────
+  // Reads `autoLockTime` (seconds) set by SettingsModal. 0 = disabled.
+  // Re-schedules on every user interaction; calls handleLogout on timeout.
+  useEffect(() => {
+    if (!user?.id) return;
+
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
+    const schedule = () => {
+      if (timer) clearTimeout(timer);
+      // Default 300 matches SettingsModal's default so timer is armed even before user opens Settings
+      const secs = parseInt(localStorage.getItem('autoLockTime') || '300', 10);
+      if (!secs) return;
+      timer = setTimeout(handleLogout, secs * 1000);
+    };
+
+    // React to cross-tab autoLockTime changes (same-tab changes are picked up on next interaction)
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === 'autoLockTime') schedule();
+    };
+
+    const events = ['mousemove', 'keydown', 'click', 'touchstart'] as const;
+    events.forEach(ev => window.addEventListener(ev, schedule, { passive: true }));
+    window.addEventListener('storage', onStorage);
+    schedule(); // arm immediately on login
+
+    return () => {
+      if (timer) clearTimeout(timer);
+      events.forEach(ev => window.removeEventListener(ev, schedule));
+      window.removeEventListener('storage', onStorage);
+    };
+  }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const contextValue: AuthContextType = {
     user,

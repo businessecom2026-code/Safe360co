@@ -23,6 +23,8 @@ const AdminConsole = lazy(() => import('./components/AdminConsole'));
 const Pricing = lazy(() => import('./components/Pricing'));
 const InviteLandingPage = lazy(() => import('./components/InviteLandingPage'));
 const ForgotPassword = lazy(() => import('./components/ForgotPassword'));
+const ProductPage = lazy(() => import('./components/ProductPage'));
+const LegalPage = lazy(() => import('./components/LegalPage'));
 
 // ─── Loading fallback ───
 function LoadingScreen() {
@@ -39,7 +41,7 @@ function LoadingScreen() {
 export default function App() {
   const { user, token, lang, authError, t, handleLogin, handleRegister, handleLogout, setLang } = useAuth();
   const { showToast } = useToast();
-  const [currentView, setCurrentView] = useState<'landing' | 'register' | 'login' | 'forgotPassword' | 'pinpad' | 'dashboard' | 'adminConsole' | 'inviteAccept'>('landing');
+  const [currentView, setCurrentView] = useState<'landing' | 'register' | 'login' | 'forgotPassword' | 'pinpad' | 'dashboard' | 'adminConsole' | 'inviteAccept' | 'product' | 'legal'>('landing');
   const [userPin, setUserPin] = useState<string>('');
   const [masterKey, setMasterKey] = useState<string>('');
   const [recoveryInitiated, setRecoveryInitiated] = useState(false);
@@ -183,11 +185,11 @@ export default function App() {
           />
         )}
         {currentView === 'adminConsole' && user?.role === 'master' && (
-          <AdminConsole onLogout={handleLogout} onBack={() => setCurrentView('dashboard')} />
+          <AdminConsole onLogout={() => { handleLogout(); setCurrentView('landing'); }} onBack={() => setCurrentView('dashboard')} />
         )}
         {currentView === 'dashboard' && (
           <Dashboard
-            onLogout={handleLogout}
+            onLogout={() => { handleLogout(); setCurrentView('landing'); }}
             onAdminConsole={user?.role === 'master' ? () => setCurrentView('adminConsole') : undefined}
             onBackToHome={() => setCurrentView('landing')}
             user={user}
@@ -251,6 +253,16 @@ export default function App() {
             error={authError}
           />
         )}
+        {currentView === 'product' && (
+          <Suspense fallback={<LoadingScreen />}>
+            <ProductPage lang={lang} onRegister={() => setCurrentView('register')} />
+          </Suspense>
+        )}
+        {currentView === 'legal' && (
+          <Suspense fallback={<LoadingScreen />}>
+            <LegalPage lang={lang} />
+          </Suspense>
+        )}
         {currentView === 'forgotPassword' && (
           <Suspense fallback={<LoadingScreen />}>
             <ForgotPassword
@@ -274,7 +286,7 @@ export default function App() {
           </Suspense>
         )}
       </main>
-      <Footer lang={lang} />
+      <Footer lang={lang} onNavigate={(view) => setCurrentView(view)} />
     </div>
   );
 }

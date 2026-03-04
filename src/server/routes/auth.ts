@@ -23,7 +23,16 @@ router.post('/register', authRateLimiter, validateRegistration, async (req, res)
   if (!email || !password) return res.status(400).json({ message: 'Email and password are required' });
 
   const existingUser = await getUserByEmail(email);
-  if (existingUser) return res.status(400).json({ message: 'User already exists' });
+  if (existingUser) {
+    // Friendlier error when email belongs to a pending (not yet activated) invite
+    if (existingUser.activated === false && existingUser.inviteToken) {
+      return res.status(400).json({
+        message: 'Este e-mail recebeu um convite. Verifique sua caixa de entrada e use o link de convite para ativar sua conta.',
+        hasInvite: true,
+      });
+    }
+    return res.status(400).json({ message: 'User already exists' });
+  }
 
   const hashedPassword = await bcrypt.hash(password, 10);
   const newUser: User = {

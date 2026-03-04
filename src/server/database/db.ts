@@ -29,15 +29,24 @@ export interface PasswordField {
   value: string; // AES-GCM encrypted — never store plaintext
 }
 
+export interface VaultItemAttachment {
+  name: string;
+  size: number;
+  mimeType: string;
+  data: string; // base64 encoded
+}
+
 export interface VaultItem {
   id: string;
   vaultId?: string;
   folderId?: string | null;
   type?: 'password' | 'note' | 'media';
+  status?: 'active' | 'pending';
   title: string;
   description: string; // legacy field — maps to note in Postgres
   passwords?: PasswordField[];
   note?: string | null;
+  attachment?: VaultItemAttachment | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -58,6 +67,7 @@ export interface Folder {
   parentId: string | null;
   name: string;
   color: string;
+  icon?: string;
   createdAt: string;
 }
 
@@ -193,6 +203,16 @@ export async function getVaultsForAdmin(adminId: string): Promise<Vault[]> {
   return db.vaults.filter(v => v.userId === adminId || guestIds.includes(v.userId));
 }
 
+export async function getVaultsForGuest(guestId: string): Promise<Vault[]> {
+  const db = await readDb();
+  const guest = db.users.find(u => u.id === guestId);
+  // Include guest's own vaults + their inviting admin's active vaults
+  if (!guest?.invitedBy) return db.vaults.filter(v => v.userId === guestId);
+  return db.vaults.filter(v =>
+    v.userId === guestId || (v.userId === guest.invitedBy && v.status !== 'pending')
+  );
+}
+
 export async function createVault(vault: Vault): Promise<Vault> {
   const db = await readDb();
   db.vaults.push(vault);
@@ -305,7 +325,7 @@ export async function createFolder(folder: Omit<Folder, 'id' | 'createdAt'>): Pr
   return newFolder;
 }
 
-export async function updateFolder(folderId: string, updates: Partial<Pick<Folder, 'name' | 'color' | 'parentId'>>): Promise<Folder | undefined> {
+export async function updateFolder(folderId: string, updates: Partial<Pick<Folder, 'name' | 'color' | 'parentId' | 'icon'>>): Promise<Folder | undefined> {
   const db = await readDb();
   const index = db.folders.findIndex(f => f.id === folderId);
   if (index === -1) return undefined;

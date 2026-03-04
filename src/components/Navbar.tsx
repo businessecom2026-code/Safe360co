@@ -1,8 +1,68 @@
-import { ShieldCheck, Globe, LayoutDashboard, Settings, Menu, X, LogOut } from 'lucide-react';
-import { useState } from 'react';
+import { ShieldCheck, LayoutDashboard, Settings, Menu, X, LogOut, ChevronDown } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
 import { ThemeToggle } from './ThemeToggle';
 import { Language, translations } from '../translations';
 import { User } from '../types';
+
+const LANG_OPTIONS: { value: Language; flag: string; code: string }[] = [
+  { value: 'pt',   flag: '🇧🇷', code: 'PT' },
+  { value: 'ptPT', flag: '🇵🇹', code: 'PT' },
+  { value: 'en',   flag: '🇺🇸', code: 'EN' },
+  { value: 'enGB', flag: '🇬🇧', code: 'EN' },
+  { value: 'es',   flag: '🇪🇸', code: 'ES' },
+  { value: 'it',   flag: '🇮🇹', code: 'IT' },
+  { value: 'zh',   flag: '🇨🇳', code: 'ZH' },
+  { value: 'fr',   flag: '🇫🇷', code: 'FR' },
+  { value: 'de',   flag: '🇩🇪', code: 'DE' },
+  { value: 'uk',   flag: '🇺🇦', code: 'UA' },
+];
+
+function LangPicker({ lang, setLang }: { lang: Language; setLang: (l: Language) => void }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const current = LANG_OPTIONS.find(o => o.value === lang) || LANG_OPTIONS[2];
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="flex items-center gap-1.5 bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 rounded-lg px-2.5 py-1.5 transition-colors"
+      >
+        <span className="text-base leading-none">{current.flag}</span>
+        <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">{current.code}</span>
+        <ChevronDown size={11} className={`text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+
+      {open && (
+        <div className="absolute right-0 mt-1.5 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl shadow-lg p-2 grid grid-cols-5 gap-1 w-[160px] z-50">
+          {LANG_OPTIONS.map(opt => (
+            <button
+              key={opt.value}
+              onClick={() => { setLang(opt.value); setOpen(false); }}
+              title={opt.value}
+              className={`flex flex-col items-center gap-0.5 p-1.5 rounded-lg transition-colors text-center ${
+                lang === opt.value
+                  ? 'bg-blue-100 dark:bg-blue-900/40'
+                  : 'hover:bg-gray-100 dark:hover:bg-slate-700'
+              }`}
+            >
+              <span className="text-lg leading-none">{opt.flag}</span>
+              <span className="text-[9px] font-medium text-gray-500 dark:text-gray-400">{opt.code}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 interface NavbarProps {
   onLogin: () => void;
@@ -52,25 +112,7 @@ export function Navbar({ onLogin, lang, setLang, user, onAdminConsole, onDashboa
                 </button>
               </div>
             )}
-            <div className="flex items-center gap-2 bg-gray-100 dark:bg-slate-800 rounded-lg p-1">
-              <Globe size={16} className="text-gray-500 ml-1" />
-              <select
-                value={lang}
-                onChange={(e) => setLang(e.target.value as Language)}
-                className="bg-transparent text-xs font-medium text-gray-700 dark:text-gray-300 outline-none cursor-pointer pr-1"
-              >
-                <option value="pt">🇧🇷 PT-BR</option>
-                <option value="ptPT">🇵🇹 PT-PT</option>
-                <option value="en">🇺🇸 EN</option>
-                <option value="enGB">🇬🇧 EN-GB</option>
-                <option value="es">🇪🇸 ES</option>
-                <option value="it">🇮🇹 IT</option>
-                <option value="zh">🇨🇳 中文</option>
-                <option value="fr">🇫🇷 FR</option>
-                <option value="de">🇩🇪 DE</option>
-                <option value="uk">🇺🇦 UA</option>
-              </select>
-            </div>
+            <LangPicker lang={lang} setLang={setLang} />
             <ThemeToggle />
             {user ? (
               <button
@@ -130,25 +172,6 @@ export function Navbar({ onLogin, lang, setLang, user, onAdminConsole, onDashboa
               {t.admin.management}
             </button>
           )}
-          <div className="flex items-center gap-3 px-3 py-2.5">
-            <Globe size={18} className="text-gray-500" />
-            <select
-              value={lang}
-              onChange={(e) => setLang(e.target.value as Language)}
-              className="bg-gray-100 dark:bg-slate-800 text-sm font-medium text-gray-700 dark:text-gray-300 rounded-lg px-2 py-1 outline-none"
-            >
-              <option value="pt">🇧🇷 Português (BR)</option>
-              <option value="ptPT">🇵🇹 Português (PT)</option>
-              <option value="en">🇺🇸 English</option>
-              <option value="enGB">🇬🇧 English (UK)</option>
-              <option value="es">🇪🇸 Español</option>
-              <option value="it">🇮🇹 Italiano</option>
-              <option value="zh">🇨🇳 中文</option>
-              <option value="fr">🇫🇷 Français</option>
-              <option value="de">🇩🇪 Deutsch</option>
-              <option value="uk">🇺🇦 Українська</option>
-            </select>
-          </div>
           <div className="pt-2 border-t border-gray-100 dark:border-slate-800">
             <button
               onClick={() => { onLogout(); setMobileMenuOpen(false); }}

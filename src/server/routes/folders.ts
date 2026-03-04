@@ -8,20 +8,30 @@ import {
   updateFolder,
   deleteFolder,
   getVaultItems,
+  getUserById,
 } from '../database/db';
 
 const router = express.Router({ mergeParams: true }); // inherits :vaultId from parent
 
 // ─── Guard: verify vault exists and caller has access ─────────────────────────
-async function assertVaultAccess(req: AuthRequest, vaultId: string): Promise<boolean> {
+// readOnly=true: also allows admin→guest and guest→admin read access
+async function assertVaultAccess(req: AuthRequest, vaultId: string, readOnly = false): Promise<boolean> {
   const vault = await getVaultById(vaultId);
   if (!vault) return false;
   const userId = req.user?.id;
   const role = req.user?.role;
   if (role === 'master') return true;
   if (vault.userId === userId) return true;
-  // Admin can access vaults of their guests (checked by guest's invitedBy — done in vaults route)
-  // Folder routes only accessed by vault owner or master for simplicity
+  if (!readOnly) return false;
+  // Read-only access: admin can read their guests' vaults; guest can read their admin's vaults
+  if (role === 'admin') {
+    const vaultUser = await getUserById(vault.userId);
+    if (vaultUser?.invitedBy === userId) return true;
+  }
+  if (role === 'guest') {
+    const guestUser = await getUserById(userId!);
+    if (vault.userId === guestUser?.invitedBy) return true;
+  }
   return false;
 }
 
@@ -29,7 +39,7 @@ async function assertVaultAccess(req: AuthRequest, vaultId: string): Promise<boo
 // Lists folders at the given depth. parentId absent = all folders; parentId=root = root level
 router.get('/', authMiddleware, async (req: AuthRequest, res) => {
   const { vaultId } = req.params;
-  if (!await assertVaultAccess(req, vaultId)) {
+  if (!await assertVaultAccess(req, vaultId, true)) {
     return res.status(403).json({ message: 'Forbidden' });
   }
 
@@ -49,7 +59,7 @@ router.get('/', authMiddleware, async (req: AuthRequest, res) => {
 // ─── GET /api/vaults/:vaultId/folders/:folderId ──────────────────────────────
 router.get('/:folderId', authMiddleware, async (req: AuthRequest, res) => {
   const { vaultId, folderId } = req.params;
-  if (!await assertVaultAccess(req, vaultId)) {
+  if (!await assertVaultAccess(req, vaultId, true)) {
     return res.status(403).json({ message: 'Forbidden' });
   }
 
@@ -115,7 +125,7 @@ router.put('/:folderId', authMiddleware, async (req: AuthRequest, res) => {
     return res.status(404).json({ message: 'Folder not found' });
   }
 
-  const { name, color, parentId } = req.body;
+  const { name, color, parentId, icon } = req.body;
 
   // Guard: prevent moving a folder into itself or its own descendant
   if (parentId !== undefined && parentId === folderId) {
@@ -126,6 +136,7 @@ router.put('/:folderId', authMiddleware, async (req: AuthRequest, res) => {
     ...(name !== undefined && { name: name.trim() }),
     ...(color !== undefined && { color }),
     ...(parentId !== undefined && { parentId: parentId ?? null }),
+    ...(icon !== undefined && { icon }),
   });
 
   if (!updated) return res.status(404).json({ message: 'Folder not found' });

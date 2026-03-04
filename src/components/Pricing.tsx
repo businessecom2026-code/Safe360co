@@ -1,8 +1,13 @@
 import { Check, ShieldCheck, CheckCircle } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Language, translations } from '../translations';
 import { useAuth } from '../context/AuthContext';
-import { initiateRevolutPay } from '../services/revolut';
+import {
+  prepareRevolutCheckout,
+  openRevolutPopup,
+  type RevolutCheckoutHandle,
+  type RevolutError,
+} from '../services/revolut';
 
 interface PricingProps {
   lang: Language;
@@ -26,6 +31,22 @@ export function Pricing({ lang, onRegister }: PricingProps) {
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [paymentError, setPaymentError] = useState('');
+  const [revolutHandle, setRevolutHandle] = useState<RevolutCheckoutHandle | null>(null);
+  const [revolutPreparing, setRevolutPreparing] = useState(false);
+
+  // Pre-create Revolut order + init SDK when modal opens (before user clicks Pay)
+  // This preserves the user-gesture context for payWithPopup()
+  useEffect(() => {
+    if (!showPaymentModal || !user || !planPrice) return;
+    setRevolutHandle(null);
+    setPaymentError('');
+    setRevolutPreparing(true);
+
+    prepareRevolutCheckout(planPrice, 'EUR', user.id, selectedPlan)
+      .then(handle => setRevolutHandle(handle))
+      .catch((err: RevolutError) => setPaymentError(err.rawMessage))
+      .finally(() => setRevolutPreparing(false));
+  }, [showPaymentModal, planPrice, selectedPlan, user]);
 
   const plans = [
     {
@@ -40,22 +61,22 @@ export function Pricing({ lang, onRegister }: PricingProps) {
     {
       name: t.pricing.pro.name,
       key: 'Pro',
-      price: isAnnual ? (lang === 'pt' ? 'R$ 17,90' : '$ 4.40') : t.pricing.pro.price,
+      price: t.pricing.pro.price,
       period: '/mês',
       description: t.pricing.pro.features[0],
       features: t.pricing.pro.features,
       highlight: true,
-      savings: isAnnual ? (lang === 'pt' ? 'Economize 10%' : 'Save 10%') : null,
+      savings: isAnnual ? t.pricing.save10 : null,
     },
     {
       name: t.pricing.scale.name,
       key: 'Scale',
-      price: isAnnual ? (lang === 'pt' ? 'R$ 44,90' : '$ 11.60') : t.pricing.scale.price,
+      price: t.pricing.scale.price,
       period: '/mês',
       description: t.pricing.scale.features[0],
       features: t.pricing.scale.features,
       highlight: false,
-      savings: isAnnual ? (lang === 'pt' ? 'Economize 10%' : 'Save 10%') : null,
+      savings: isAnnual ? t.pricing.save10 : null,
     },
   ];
 
@@ -80,12 +101,14 @@ export function Pricing({ lang, onRegister }: PricingProps) {
   };
 
   const handlePayment = () => {
+    if (!revolutHandle) return;
     setPaymentLoading(true);
     setPaymentError('');
 
-    initiateRevolutPay(
-      planPrice,
-      'EUR',
+    // openRevolutPopup is called SYNCHRONOUSLY here — inside the click handler —
+    // so the browser treats payWithPopup() as a direct user gesture (no popup block).
+    openRevolutPopup(
+      revolutHandle,
       async () => {
         try {
           const response = await fetch('/api/auth/upgrade', {
@@ -108,9 +131,9 @@ export function Pricing({ lang, onRegister }: PricingProps) {
           setPaymentLoading(false);
         }
       },
-      (error) => {
+      (err: RevolutError) => {
         setPaymentLoading(false);
-        setPaymentError(error?.message || 'Pagamento cancelado ou falhou.');
+        setPaymentError(err.stage === 'cancel' ? 'Pagamento cancelado.' : (err.rawMessage || 'Pagamento falhou.'));
       }
     );
   };
@@ -122,14 +145,16 @@ export function Pricing({ lang, onRegister }: PricingProps) {
     setPaymentLoading(false);
     setPaymentSuccess(false);
     setPaymentError('');
+    setRevolutHandle(null);
+    setRevolutPreparing(false);
   };
 
   const getButtonLabel = (planKey: string) => {
     if (planKey === 'Free') {
-      return lang === 'pt' ? 'Plano Atual' : lang === 'en' ? 'Current Plan' : 'Plan Actual';
+      return t.pricing.currentPlan;
     }
     if (user && user.plan === planKey) {
-      return lang === 'pt' ? 'Plano Atual' : lang === 'en' ? 'Current Plan' : 'Plan Actual';
+      return t.pricing.currentPlan;
     }
     return `${t.pricing.cta} ${plans.find(p => p.key === planKey)?.name || planKey}`;
   };
@@ -143,7 +168,7 @@ export function Pricing({ lang, onRegister }: PricingProps) {
           </h2>
           <div className="flex items-center justify-center gap-4">
             <span className={`text-sm font-medium ${!isAnnual ? 'text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'}`}>
-              {lang === 'pt' ? 'Mensal' : lang === 'en' ? 'Monthly' : 'Mensual'}
+              {t.pricing.monthly}
             </span>
             <button
               onClick={() => setIsAnnual(!isAnnual)}
@@ -156,7 +181,7 @@ export function Pricing({ lang, onRegister }: PricingProps) {
               />
             </button>
             <span className={`text-sm font-medium ${isAnnual ? 'text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'}`}>
-              {lang === 'pt' ? 'Anual' : lang === 'en' ? 'Annual' : 'Anual'} <span className="text-green-500 text-xs font-bold ml-1">-10% OFF</span>
+              {t.pricing.annual} <span className="text-green-500 text-xs font-bold ml-1">-10% OFF</span>
             </span>
           </div>
         </div>
@@ -177,7 +202,7 @@ export function Pricing({ lang, onRegister }: PricingProps) {
               >
                 {plan.highlight && (
                   <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-blue-600 text-white px-4 py-1 rounded-full text-sm font-medium">
-                    {lang === 'pt' ? 'Mais Popular' : lang === 'en' ? 'Most Popular' : 'Más Popular'}
+                    {t.pricing.mostPopular}
                   </div>
                 )}
 
@@ -223,7 +248,7 @@ export function Pricing({ lang, onRegister }: PricingProps) {
                   {isCurrentPlan ? (
                     <span className="flex items-center justify-center gap-2">
                       <CheckCircle className="h-4 w-4" />
-                      {lang === 'pt' ? 'Plano Atual' : lang === 'en' ? 'Current Plan' : 'Plan Actual'}
+                      {t.pricing.currentPlan}
                     </span>
                   ) : (
                     getButtonLabel(plan.key)
@@ -247,28 +272,28 @@ export function Pricing({ lang, onRegister }: PricingProps) {
                     <ShieldCheck size={24} />
                   </div>
                   <h3 className="text-lg font-bold">
-                    {lang === 'pt' ? 'Upgrade de Plano' : lang === 'en' ? 'Plan Upgrade' : 'Mejorar Plan'}
+                    {t.pricing.planUpgrade}
                   </h3>
                 </div>
 
                 <div className="bg-slate-50 dark:bg-slate-900 rounded-xl p-4 space-y-3 mb-4">
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-500">
-                      {lang === 'pt' ? 'Plano' : 'Plan'}
+                      {t.pricing.plan}
                     </span>
                     <span className="font-medium">{selectedPlan}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-500">
-                      {lang === 'pt' ? 'Periodo' : lang === 'en' ? 'Period' : 'Periodo'}
+                      {t.pricing.period}
                     </span>
                     <span className="font-medium">
-                      {lang === 'pt' ? 'Mensal' : lang === 'en' ? 'Monthly' : 'Mensual'}
+                      {t.pricing.monthly}
                     </span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-500">
-                      {lang === 'pt' ? 'Beneficiario' : lang === 'en' ? 'Provider' : 'Beneficiario'}
+                      {t.pricing.provider}
                     </span>
                     <span className="font-medium">Ecom360.co</span>
                   </div>
@@ -284,17 +309,17 @@ export function Pricing({ lang, onRegister }: PricingProps) {
 
                 <div className="flex gap-2">
                   <button onClick={closeModal} className="flex-1 px-4 py-2 rounded-lg text-gray-600 dark:text-gray-300 border border-slate-300 dark:border-slate-600">
-                    {lang === 'pt' ? 'Cancelar' : 'Cancel'}
+                    {t.pricing.cancel}
                   </button>
                   <button
                     onClick={handlePayment}
-                    disabled={paymentLoading}
+                    disabled={paymentLoading || revolutPreparing || !revolutHandle}
                     className="flex-1 px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white font-semibold disabled:opacity-50 flex items-center justify-center gap-2"
                   >
-                    {paymentLoading ? (
+                    {(paymentLoading || revolutPreparing) ? (
                       <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                     ) : (
-                      lang === 'pt' ? 'Pagar Agora' : lang === 'en' ? 'Pay Now' : 'Pagar Ahora'
+                      t.pricing.payNow
                     )}
                   </button>
                 </div>
@@ -306,14 +331,10 @@ export function Pricing({ lang, onRegister }: PricingProps) {
                     <CheckCircle size={24} />
                   </div>
                   <h3 className="text-lg font-bold">
-                    {lang === 'pt' ? 'Plano Atualizado!' : lang === 'en' ? 'Plan Upgraded!' : 'Plan Mejorado!'}
+                    {t.pricing.planUpgraded}
                   </h3>
                   <p className="text-sm text-slate-500 mt-2">
-                    {lang === 'pt'
-                      ? `Seu plano foi atualizado para ${selectedPlan}. Faca login novamente para aplicar.`
-                      : lang === 'en'
-                        ? `Your plan has been upgraded to ${selectedPlan}. Please log in again to apply.`
-                        : `Su plan ha sido mejorado a ${selectedPlan}. Inicie sesion nuevamente para aplicar.`}
+                    {t.pricing.planUpgradedMsg.replace('{plan}', selectedPlan)}
                   </p>
                 </div>
                 <button
