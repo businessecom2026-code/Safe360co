@@ -9,8 +9,8 @@ channel = "stable-25_05"
 NODE_ENV = "production"
 
 [deployment]
-run = ["sh", "-c", "npx prisma db push && npm run start"]
-build = ["sh", "-c", "npm install && cp src/server/database/db-postgres.ts src/server/database/db.ts && npx prisma generate && npm run build"]
+run = ["sh", "-c", "npm run start"]
+build = ["sh", "-c", "npm install && npm run build"]
 deploymentTarget = "reserved_vm"
 
 [[ports]]
