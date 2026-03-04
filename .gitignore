@@ -11,6 +11,11 @@ coverage/
 .env.production
 !.env.example
 
+# Database files (contain user data — never commit)
+db.json
+*.db
+safe360-prod.db
+
 # Replit
 .cache/
 .config/
