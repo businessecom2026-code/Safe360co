@@ -563,7 +563,37 @@ export function Dashboard({ onLogout, onBackToHome, onAdminConsole, user }: Dash
 
   // ─── Invite helpers ───────────────────────────────────────────────────────
 
-  const handleInviteGuest = () => { if (!inviteEmail.trim()) return; setInviteStep('payment'); };
+  const handleInviteGuest = async () => {
+    if (!inviteEmail.trim()) return;
+
+    // Super Admin (master) bypasses payment — invite directly
+    if (user?.role === 'master') {
+      setInviteLoading(true);
+      try {
+        const res = await fetch('/api/auth/invite', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ email: inviteEmail }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setInviteLink(data.inviteLink);
+          setInviteStep('success');
+          fetchGuests();
+        } else {
+          const err = await res.json();
+          showToast(`Erro: ${err.message}`, 'error');
+        }
+      } catch {
+        showToast('Erro ao criar convite.', 'error');
+      } finally {
+        setInviteLoading(false);
+      }
+      return;
+    }
+
+    setInviteStep('payment');
+  };
 
   const handlePaymentConfirm = () => {
     if (!inviteRevolutHandle) return;
@@ -1735,7 +1765,9 @@ export function Dashboard({ onLogout, onBackToHome, onAdminConsole, user }: Dash
                 <div className="text-center mb-4">
                   <div className="inline-flex w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-500 items-center justify-center mb-3"><UserPlus size={24} /></div>
                   <h3 className="text-lg font-bold">{t.dashboard.access.addExtra}</h3>
-                  <p className="text-xs text-slate-500 mt-1">Custo: {t.dashboard.access.inviteAmount} por usuario</p>
+                  {user?.role !== 'master' && (
+                    <p className="text-xs text-slate-500 mt-1">Custo: {t.dashboard.access.inviteAmount} por usuario</p>
+                  )}
                 </div>
                 <label className="text-xs font-medium text-slate-500 mb-1 block">{t.dashboard.access.emailLabel}</label>
                 <input type="email" value={inviteEmail} onChange={e => setInviteEmail(e.target.value)} placeholder={t.dashboard.access.emailPlaceholder}

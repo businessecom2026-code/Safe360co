@@ -58,11 +58,19 @@ router.post('/create-order', paymentRateLimiter, async (req, res) => {
 
     const order = await response.json();
 
+    // Revolut API v2+ returns `token` instead of `public_id`
+    const publicId = order.token || order.public_id;
+
+    if (!publicId) {
+      console.error('[payments] Revolut order missing token/public_id:', { orderId: order.id, keys: Object.keys(order) });
+      return res.status(502).json({ message: 'Revolut order created but no public token received' });
+    }
+
     res.json({
       orderId: order.id,
-      publicId: order.public_id,
-      amount: order.amount,
-      currency: order.currency,
+      publicId,
+      amount: order.amount || amount,
+      currency: order.currency || currency,
       merchantRef,
       env: (process.env.REVOLUT_ENV === 'sandbox' ? 'sandbox' : 'prod') as 'prod' | 'sandbox',
     });
