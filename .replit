@@ -10,7 +10,7 @@ NODE_ENV = "production"
 
 [deployment]
 run = ["sh", "-c", "npm run start"]
-build = ["sh", "-c", "npm install && npm run build"]
+build = ["sh", "-c", "npm install && if [ -n \"$DATABASE_URL\" ]; then echo '>>> Switching to PostgreSQL...' && cp src/server/database/db-postgres.ts src/server/database/db.ts && npx prisma generate && npx prisma db push && echo '>>> PostgreSQL schema applied.'; else echo '>>> No DATABASE_URL — using JSON file DB.' && npx prisma generate; fi && npm run build"]
 deploymentTarget = "cloudrun"
 publicDir = "dist/public"
 

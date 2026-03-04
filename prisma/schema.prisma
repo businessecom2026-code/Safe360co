@@ -37,7 +37,7 @@ model Vault {
   id        String   @id @default(uuid())
   name      String
   userId    String
-  color     String   @default("#6366f1") // folder card color (req.2)
+  color     String   @default("#6366f1")
   status    String   @default("active")  // 'active' | 'pending'
   createdAt DateTime @default(now())
 
@@ -56,17 +56,17 @@ model Folder {
   vaultId   String
   parentId  String?  // null = root folder of vault
   name      String
-  color     String   @default("#6366f1") // per-folder color (req.2)
+  color     String   @default("#6366f1")
+  icon      String   @default("Folder")  // lucide icon key
   createdAt DateTime @default(now())
 
-  // Self-referential relation — SET NULL on parent delete (children promoted to root)
   vault    Vault     @relation(fields: [vaultId], references: [id], onDelete: Cascade)
   parent   Folder?   @relation("FolderChildren", fields: [parentId], references: [id], onDelete: SetNull)
   children Folder[]  @relation("FolderChildren")
   items    VaultItem[]
 
   @@index([vaultId])
-  @@index([vaultId, parentId]) // fast listing of folder contents
+  @@index([vaultId, parentId])
 }
 
 // ─── Vault Items ─────────────────────────────────────────────────────────────
@@ -74,18 +74,15 @@ model Folder {
 model VaultItem {
   id           String   @id @default(uuid())
   vaultId      String
-  folderId     String?  // null = root of vault (no folder)
+  folderId     String?  // null = root of vault
   type         String   @default("note") // 'password' | 'note' | 'media'
+  status       String   @default("active") // 'active' | 'pending' (guest submissions)
   title        String
-
-  // JSONB column: stores PasswordField[] — encrypted blobs, never queried by field value
-  // Schema: [{ label: string, value: string }]  (value = AES-GCM encrypted)
-  passwords    Json     @default("[]")
-
-  note         String?  // plain note content (also encrypted client-side for sensitive data)
-  mediaRef     String?  // path/key in object storage (req.4)
-  mediaPinHash String?  // bcrypt hash of media access PIN (req.4)
-
+  passwords    Json     @default("[]") // PasswordField[] — AES-GCM encrypted values
+  note         String?
+  attachment   Json?    // VaultItemAttachment { name, size, mimeType, data }
+  mediaRef     String?
+  mediaPinHash String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -93,7 +90,8 @@ model VaultItem {
   folder Folder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
 
   @@index([vaultId])
-  @@index([vaultId, folderId]) // fast folder content queries
+  @@index([vaultId, folderId])
+  @@index([vaultId, status])
 }
 
 // ─── Activity Logs ───────────────────────────────────────────────────────────
@@ -109,19 +107,18 @@ model ActivityLog {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
-  @@index([timestamp]) // for admin log queries sorted by time
+  @@index([timestamp])
 }
 
-// ─── Backup Snapshots (req.8) ────────────────────────────────────────────────
+// ─── Backup Snapshots ────────────────────────────────────────────────────────
 
 model BackupSnapshot {
   id        String   @id @default(uuid())
   userId    String
-  payload   Json     // full vault export — encrypted with user masterKey before storing
+  payload   Json
   createdAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  // Keep only last 7 — enforced in application layer, not DB constraint
   @@index([userId, createdAt])
 }

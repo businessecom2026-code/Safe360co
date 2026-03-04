@@ -3,8 +3,8 @@
  *  Safe360 — Database Abstraction Layer (PostgreSQL / Prisma)
  * ═══════════════════════════════════════════════════════════════
  *  All database operations live here. Swap DATABASE_URL in .env
- *  to switch between Railway (prod) and any Postgres (dev/test).
- *  Routes and middleware import ONLY from this file — zero coupling.
+ *  to switch between Replit/Neon (prod) and JSON file (dev).
+ *  Routes and middleware import ONLY from db.ts — zero coupling.
  * ═══════════════════════════════════════════════════════════════
  */
 
@@ -12,13 +12,38 @@ import { PrismaClient, Prisma } from '@prisma/client';
 import { User } from '../../types';
 
 // ─── Singleton Prisma Client ──────────────────────────────────────────────────
-// Prisma 7: URL configured via prisma.config.ts (not constructor arg)
-// One instance reused across hot reloads in dev (tsx watch)
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 export const prisma = globalForPrisma.prisma ?? new PrismaClient();
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
 
-// ─── Types (public contract — unchanged from JSON era) ───────────────────────
+// ─── Types (public contract — identical to db.ts JSON layer) ─────────────────
+
+export interface PasswordField {
+  label: string;
+  value: string; // AES-GCM encrypted — never store plaintext
+}
+
+export interface VaultItemAttachment {
+  name: string;
+  size: number;
+  mimeType: string;
+  data: string; // base64 encoded
+}
+
+export interface VaultItem {
+  id: string;
+  vaultId?: string;
+  folderId?: string | null;
+  type?: 'password' | 'note' | 'media';
+  status?: 'active' | 'pending'; // guest submissions start as 'pending'
+  title: string;
+  description: string; // legacy compat — maps to note field
+  passwords?: PasswordField[];
+  note?: string | null;
+  attachment?: VaultItemAttachment | null;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export interface Vault {
   id: string;
@@ -30,30 +55,13 @@ export interface Vault {
   data: VaultItem[]; // always [] — items fetched separately via getVaultItems()
 }
 
-export interface VaultItem {
-  id: string;
-  vaultId?: string;
-  folderId?: string | null;
-  type?: 'password' | 'note' | 'media';
-  title: string;
-  description: string; // legacy compat — maps to note field
-  passwords?: PasswordField[];
-  note?: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface PasswordField {
-  label: string;
-  value: string; // AES-GCM encrypted — never store plaintext
-}
-
 export interface Folder {
   id: string;
   vaultId: string;
   parentId: string | null;
   name: string;
   color: string;
+  icon?: string;
   createdAt: string;
 }
 
@@ -99,15 +107,18 @@ function mapVault(v: Prisma.VaultGetPayload<object>): Vault {
 
 function mapItem(i: Prisma.VaultItemGetPayload<object>): VaultItem {
   const passwords = Array.isArray(i.passwords) ? (i.passwords as unknown) as PasswordField[] : [];
+  const attachment = i.attachment ? (i.attachment as unknown) as VaultItemAttachment : null;
   return {
     id: i.id,
     vaultId: i.vaultId,
     folderId: i.folderId,
     type: i.type as VaultItem['type'],
+    status: (i.status ?? 'active') as 'active' | 'pending',
     title: i.title,
     description: i.note ?? '', // legacy compat for existing routes
     passwords,
     note: i.note,
+    attachment,
     createdAt: i.createdAt.toISOString(),
     updatedAt: i.updatedAt.toISOString(),
   };
@@ -120,6 +131,7 @@ function mapFolder(f: Prisma.FolderGetPayload<object>): Folder {
     parentId: f.parentId,
     name: f.name,
     color: f.color,
+    icon: f.icon ?? 'Folder',
     createdAt: f.createdAt.toISOString(),
   };
 }
@@ -157,7 +169,6 @@ export async function getUserByEmail(email: string): Promise<User | undefined> {
 export async function getUserByResetToken(token: string): Promise<{ user: User; index: number } | undefined> {
   const u = await prisma.user.findUnique({ where: { resetToken: token } });
   if (!u) return undefined;
-  // index is a legacy artifact — pass 0, callers use updateUser(id) not updateUserByIndex
   return { user: mapUser(u), index: 0 };
 }
 
@@ -213,11 +224,8 @@ export async function updateUser(id: string, updates: Partial<User>): Promise<Us
   }
 }
 
-// Legacy: routes that used index-based updates now use updateUser(id) internally
+// Legacy: index-based updates — no-op in Postgres (callers use updateUser by id)
 export async function updateUserByIndex(index: number, updates: Partial<User>): Promise<void> {
-  // index is meaningless in Postgres — this is only called from auth routes
-  // Those routes always have the user.id available via getUserByResetToken/getUserByInviteToken
-  // This function is intentionally a no-op; callers should use updateUser(id) directly
   void index; void updates;
 }
 
@@ -248,12 +256,23 @@ export async function getVaultById(vaultId: string): Promise<Vault | undefined> 
 }
 
 export async function getVaultsForAdmin(adminId: string): Promise<Vault[]> {
-  // Admin sees own vaults + vaults of users they invited
   const guestIds = await prisma.user.findMany({
     where: { invitedBy: adminId },
     select: { id: true },
   });
   const ids = [adminId, ...guestIds.map(g => g.id)];
+  const vaults = await prisma.vault.findMany({
+    where: { userId: { in: ids } },
+    orderBy: { createdAt: 'asc' },
+  });
+  return vaults.map(mapVault);
+}
+
+export async function getVaultsForGuest(guestId: string): Promise<Vault[]> {
+  // Guest sees their own vaults + their inviter's vaults
+  const guest = await prisma.user.findUnique({ where: { id: guestId }, select: { invitedBy: true } });
+  const ids = [guestId];
+  if (guest?.invitedBy) ids.push(guest.invitedBy);
   const vaults = await prisma.vault.findMany({
     where: { userId: { in: ids } },
     orderBy: { createdAt: 'asc' },
@@ -293,7 +312,6 @@ export async function updateVault(vaultId: string, updates: Partial<Vault>): Pro
 
 export async function deleteVault(vaultId: string): Promise<boolean> {
   try {
-    // Cascade in schema handles folders + items automatically
     await prisma.vault.delete({ where: { id: vaultId } });
     return true;
   } catch {
@@ -309,7 +327,6 @@ export async function countVaultsByUser(userId: string): Promise<number> {
 
 export async function getVaultItems(vaultId: string, folderId?: string | null): Promise<VaultItem[]> {
   const where: Prisma.VaultItemWhereInput = { vaultId };
-  // undefined = all items; null = root items only; string = specific folder
   if (folderId !== undefined) where.folderId = folderId;
   const items = await prisma.vaultItem.findMany({
     where,
@@ -326,9 +343,11 @@ export async function addVaultItem(vaultId: string, item: VaultItem): Promise<Va
         vaultId,
         folderId: item.folderId ?? null,
         type: item.type ?? 'note',
+        status: item.status ?? 'active',
         title: item.title,
         passwords: ((item.passwords ?? []) as unknown) as Prisma.InputJsonValue,
-        note: item.description || item.note || null, // legacy: description → note
+        note: item.description || item.note || null,
+        attachment: item.attachment ? (item.attachment as unknown as Prisma.InputJsonValue) : Prisma.JsonNull,
         createdAt: item.createdAt ? new Date(item.createdAt) : new Date(),
         updatedAt: item.updatedAt ? new Date(item.updatedAt) : new Date(),
       },
@@ -345,12 +364,17 @@ export async function updateVaultItem(vaultId: string, itemId: string, updates: 
       where: { id: itemId, vaultId },
       data: {
         ...(updates.title !== undefined && { title: updates.title }),
-        // legacy: description maps to note
         ...(updates.description !== undefined && { note: updates.description }),
         ...(updates.note !== undefined && { note: updates.note }),
         ...(updates.passwords !== undefined && { passwords: (updates.passwords as unknown) as Prisma.InputJsonValue }),
         ...(updates.folderId !== undefined && { folderId: updates.folderId }),
         ...(updates.type !== undefined && { type: updates.type }),
+        ...(updates.status !== undefined && { status: updates.status }),
+        ...(updates.attachment !== undefined && {
+          attachment: updates.attachment
+            ? (updates.attachment as unknown as Prisma.InputJsonValue)
+            : Prisma.JsonNull,
+        }),
         updatedAt: new Date(),
       },
     });
@@ -393,7 +417,6 @@ export async function getFolderById(folderId: string): Promise<Folder | undefine
 }
 
 export async function createFolder(folder: Omit<Folder, 'id' | 'createdAt'>): Promise<Folder> {
-  // Guard: max depth 8 to prevent infinite recursion in tree queries
   if (folder.parentId) {
     const depth = await getFolderDepth(folder.parentId);
     if (depth >= 8) throw new Error('MAX_DEPTH_EXCEEDED');
@@ -404,12 +427,13 @@ export async function createFolder(folder: Omit<Folder, 'id' | 'createdAt'>): Pr
       parentId: folder.parentId,
       name: folder.name,
       color: folder.color ?? '#6366f1',
+      icon: folder.icon ?? 'Folder',
     },
   });
   return mapFolder(created);
 }
 
-export async function updateFolder(folderId: string, updates: Partial<Pick<Folder, 'name' | 'color' | 'parentId'>>): Promise<Folder | undefined> {
+export async function updateFolder(folderId: string, updates: Partial<Pick<Folder, 'name' | 'color' | 'parentId' | 'icon'>>): Promise<Folder | undefined> {
   try {
     const updated = await prisma.folder.update({
       where: { id: folderId },
@@ -417,6 +441,7 @@ export async function updateFolder(folderId: string, updates: Partial<Pick<Folde
         ...(updates.name !== undefined && { name: updates.name }),
         ...(updates.color !== undefined && { color: updates.color }),
         ...(updates.parentId !== undefined && { parentId: updates.parentId }),
+        ...(updates.icon !== undefined && { icon: updates.icon }),
       },
     });
     return mapFolder(updated);
@@ -427,7 +452,6 @@ export async function updateFolder(folderId: string, updates: Partial<Pick<Folde
 
 export async function deleteFolder(folderId: string): Promise<boolean> {
   try {
-    // ON DELETE CASCADE removes child folders; ON DELETE SET NULL orphans items to root
     await prisma.folder.delete({ where: { id: folderId } });
     return true;
   } catch {
@@ -435,7 +459,6 @@ export async function deleteFolder(folderId: string): Promise<boolean> {
   }
 }
 
-// Traverses the Adjacency List upward to compute depth (max 8 hops before throwing)
 async function getFolderDepth(folderId: string, current = 0): Promise<number> {
   if (current > 8) return current;
   const folder = await prisma.folder.findUnique({
@@ -455,7 +478,7 @@ export async function logActivity(userId: string, action: string, details?: stri
     await prisma.activityLog.create({
       data: { userId, action, details, ip },
     });
-    // Prune: keep only last 2000 logs per user to prevent table bloat
+    // Prune: keep only last 2000 logs per user
     const oldLogs = await prisma.activityLog.findMany({
       where: { userId },
       orderBy: { timestamp: 'desc' },
@@ -468,7 +491,7 @@ export async function logActivity(userId: string, action: string, details?: stri
       });
     }
   } catch {
-    // Logging must never throw — silent failure
+    // Logging must never throw
   }
 }
 
@@ -494,7 +517,6 @@ export async function getAllActivityLogs(limit = 100): Promise<ActivityLogEntry[
 // ════════════════════════════════════════════════════════════════
 
 export async function getFullDatabase() {
-  // Used by admin export — runs in a single transaction for consistency
   const [users, vaults, activityLogs] = await prisma.$transaction([
     prisma.user.findMany(),
     prisma.vault.findMany({ include: { items: true } }),
