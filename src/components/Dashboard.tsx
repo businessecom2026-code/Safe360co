@@ -936,7 +936,7 @@ export function Dashboard({ onLogout, onBackToHome, onAdminConsole, user }: Dash
           )}
         </main>
 
-        {/* FAB group — hidden for shared (read-only) vaults */}
+        {/* FAB group — owner: Add Folder + Add Item │ guest: Add Item only (goes pending) */}
         {!isSharedVault && (
           <div className="fixed bottom-6 right-6 flex flex-col items-end gap-2 z-50">
             <button
@@ -949,6 +949,18 @@ export function Dashboard({ onLogout, onBackToHome, onAdminConsole, user }: Dash
             <button
               onClick={() => setShowAddItem(true)}
               className="w-14 h-14 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-lg flex items-center justify-center transition-transform hover:scale-110"
+            >
+              <Plus size={24} />
+            </button>
+          </div>
+        )}
+        {/* Guest in shared vault: Add Item only (saved as pending, awaiting approval) */}
+        {isSharedVault && user?.role === 'guest' && (
+          <div className="fixed bottom-6 right-6 z-50">
+            <button
+              onClick={() => setShowAddItem(true)}
+              className="w-14 h-14 rounded-full bg-yellow-500 hover:bg-yellow-600 text-white shadow-lg flex items-center justify-center transition-transform hover:scale-110"
+              title={tv.newFolder}
             >
               <Plus size={24} />
             </button>

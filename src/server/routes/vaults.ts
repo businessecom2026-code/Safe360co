@@ -126,10 +126,22 @@ router.post('/:vaultId/items', authMiddleware, async (req: AuthRequest, res) => 
 
   const vault = await getVaultById(req.params.vaultId);
   if (!vault) return res.status(404).json({ message: 'Vault not found' });
-  if (vault.userId !== userId && userRole !== 'master') return res.status(403).json({ message: 'Forbidden' });
 
-  const currentUser = await getUserById(userId!);
-  const limits = getPlanLimits(currentUser?.plan);
+  if (vault.userId !== userId && userRole !== 'master') {
+    // Guests may add items (pending approval) to their inviter's vault
+    if (userRole === 'guest') {
+      const requestingUser = await getUserById(userId!);
+      if (vault.userId !== requestingUser?.invitedBy) {
+        return res.status(403).json({ message: 'Forbidden' });
+      }
+    } else {
+      return res.status(403).json({ message: 'Forbidden' });
+    }
+  }
+
+  // Use vault owner's plan limits (not the guest's)
+  const vaultOwner = await getUserById(vault.userId);
+  const limits = getPlanLimits(vaultOwner?.plan);
   const itemCount = await countVaultItems(req.params.vaultId);
 
   if (itemCount >= limits.maxItemsPerVault && userRole !== 'master') {
