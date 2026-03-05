@@ -347,7 +347,7 @@ export async function addVaultItem(vaultId: string, item: VaultItem): Promise<Va
         title: item.title,
         passwords: ((item.passwords ?? []) as unknown) as Prisma.InputJsonValue,
         note: item.description || item.note || null,
-        attachment: item.attachment ? (item.attachment as unknown as Prisma.InputJsonValue) : Prisma.JsonNull,
+        attachment: item.attachment ? (item.attachment as unknown as Prisma.InputJsonValue) : null,
         createdAt: item.createdAt ? new Date(item.createdAt) : new Date(),
         updatedAt: item.updatedAt ? new Date(item.updatedAt) : new Date(),
       },
@@ -373,7 +373,7 @@ export async function updateVaultItem(vaultId: string, itemId: string, updates: 
         ...(updates.attachment !== undefined && {
           attachment: updates.attachment
             ? (updates.attachment as unknown as Prisma.InputJsonValue)
-            : Prisma.JsonNull,
+            : null,
         }),
         updatedAt: new Date(),
       },
