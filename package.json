@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "npx tsx server.ts",
     "build": "npx vite build",
+    "build:local": "npx vite build --config vite.local.config.ts",
     "start": "NODE_ENV=production npx tsx server.ts",
     "preview": "vite preview",
     "clean": "rm -rf dist",
