@@ -1,4 +1,4 @@
-run = "npm install && npm run build && npx prisma migrate deploy && npm run start"
+run = "npm install && npm run build && npx prisma db push --accept-data-loss && npm run start"
 entrypoint = "server.ts"
 modules = ["nodejs-20", "web", "nix"]
 
