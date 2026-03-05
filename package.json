@@ -9,6 +9,7 @@
     "build:local": "npx vite build --config vite.local.config.ts",
     "start": "NODE_ENV=production npx tsx server.ts",
     "start:railway": "npx prisma migrate deploy && NODE_ENV=production npx tsx server.ts",
+    "start:replit": "npx prisma db push --accept-data-loss && NODE_ENV=production npx tsx server.ts",
     "preview": "vite preview",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit"
