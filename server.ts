@@ -25,8 +25,8 @@ const railwayEnv = process.env.RAILWAY_ENVIRONMENT || 'local'; // 'production' |
 function validateEnv() {
   const warnings: string[] = [];
 
-  if (!process.env.JWT_SECRET || process.env.JWT_SECRET === 'your_jwt_secret') {
-    warnings.push('JWT_SECRET not set or using default — authentication is insecure!');
+  if (!process.env.JWT_SECRET) {
+    warnings.push('JWT_SECRET not set — authentication is insecure!');
   }
   if (!process.env.RESEND_API_KEY) {
     warnings.push('RESEND_API_KEY not set — emails will not be sent.');
