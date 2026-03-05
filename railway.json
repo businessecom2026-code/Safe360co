@@ -1,0 +1,12 @@
+{
+  "$schema": "https://railway.com/railway.schema.json",
+  "build": {
+    "builder": "NIXPACKS",
+    "buildCommand": "npm install && cp src/server/database/db-postgres.ts src/server/database/db.ts && npx prisma generate && npm run build"
+  },
+  "deploy": {
+    "startCommand": "npx prisma db push && npm run start",
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 3
+  }
+}
