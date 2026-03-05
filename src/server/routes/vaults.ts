@@ -4,7 +4,7 @@ import { getPlanLimits } from '../utils/planLimits';
 import {
   getVaults, getVaultsByUser, getVaultById, getVaultsForAdmin, getVaultsForGuest,
   createVault, updateVault, deleteVault,
-  addVaultItem, updateVaultItem, deleteVaultItem, countVaultItems,
+  getVaultItems, addVaultItem, updateVaultItem, deleteVaultItem, countVaultItems,
   getUserById, countVaultsByUser,
   type Vault, type VaultItem,
 } from '../database/db';
@@ -110,12 +110,10 @@ router.get('/:vaultId/items', authMiddleware, async (req: AuthRequest, res) => {
     }
   }
 
-  const allItems = vault.data || [];
   const folderIdParam = req.query.folderId as string | undefined;
-  if (folderIdParam !== undefined) {
-    return res.json(allItems.filter((i: VaultItem) => i.folderId === folderIdParam));
-  }
-  return res.json(allItems.filter((i: VaultItem) => !i.folderId));
+  // Pass null for root items (no folder), or the specific folderId
+  const items = await getVaultItems(req.params.vaultId, folderIdParam !== undefined ? folderIdParam : null);
+  return res.json(items);
 });
 
 router.post('/:vaultId/items', authMiddleware, async (req: AuthRequest, res) => {
