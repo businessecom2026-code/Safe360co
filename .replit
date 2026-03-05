@@ -9,9 +9,8 @@ channel = "stable-25_05"
 NODE_ENV = "production"
 
 [deployment]
-run = "npm run start:replit"
-build = "npm install && npm run build"
 deploymentTarget = "reserved_vm"
+run = ["sh", "-c", "npm install && npm run build && npm run start:replit"]
 
 [[ports]]
 localPort = 3000
