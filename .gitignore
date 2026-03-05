@@ -24,3 +24,4 @@ safe360-prod.db
 # OS files
 Thumbs.db
 .DS_Store
+nul
