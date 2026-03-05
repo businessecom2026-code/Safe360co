@@ -15,7 +15,8 @@ import {
 import { sendInviteEmail, sendPasswordResetEmail, sendWelcomeEmail, sendGuestActivatedNotification, sendSupportEmail } from '../utils/emailService';
 
 const router = express.Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) throw new Error('JWT_SECRET environment variable is required');
 
 // Register
 router.post('/register', authRateLimiter, validateRegistration, async (req, res) => {
