@@ -9,7 +9,7 @@ import { validateRegistration, validateLogin } from '../middleware/validate';
 import { getPlanLimits } from '../utils/planLimits';
 import {
   getUserByEmail, getUserById, getUserByResetToken, getUserByInviteToken,
-  createUser, updateUser, updateUserByIndex, countGuestsByInviter, getGuestsByInviter,
+  createUser, updateUser, countGuestsByInviter, getGuestsByInviter,
   logActivity, getUserActivityLogs,
 } from '../database/db';
 import { sendInviteEmail, sendPasswordResetEmail, sendWelcomeEmail, sendGuestActivatedNotification, sendSupportEmail } from '../utils/emailService';
@@ -47,7 +47,7 @@ router.post('/register', authRateLimiter, validateRegistration, async (req, res)
 
   await createUser(newUser);
   logActivity(newUser.id, 'REGISTER', `Nova conta criada: ${email}`, req.ip);
-  sendWelcomeEmail(email).catch(() => {});
+  sendWelcomeEmail(email).catch((err) => console.error('[auth] sendWelcomeEmail failed:', err));
   res.status(201).json({ message: 'User registered successfully', userId: newUser.id });
 });
 
@@ -133,9 +133,9 @@ router.post('/invite/:token/activate', async (req, res) => {
   const result = await getUserByInviteToken(req.params.token);
   if (!result) return res.status(404).json({ message: 'Invalid or expired invite token' });
 
-  const { user: guest, index } = result;
+  const { user: guest } = result;
   const hashedPassword = await bcrypt.hash(pin, 10);
-  await updateUserByIndex(index, { password: hashedPassword, activated: true, inviteToken: undefined });
+  await updateUser(guest.id, { password: hashedPassword, activated: true, inviteToken: undefined });
 
   const inviter = await getUserById(guest.invitedBy || '');
   if (inviter?.email) sendGuestActivatedNotification(inviter.email, guest.email).catch(() => {});

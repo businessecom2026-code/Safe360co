@@ -5,9 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "npx tsx server.ts",
-    "build": "npx vite build",
+    "build": "npx prisma generate && npx vite build",
     "build:local": "npx vite build --config vite.local.config.ts",
     "start": "NODE_ENV=production npx tsx server.ts",
+    "start:railway": "npx prisma migrate deploy && NODE_ENV=production npx tsx server.ts",
     "preview": "vite preview",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit"

@@ -196,7 +196,7 @@ export async function createUser(user: User): Promise<User> {
       planExpiresAt: user.planExpiresAt ? new Date(user.planExpiresAt) : null,
       invitedBy: user.invitedBy ?? null,
       inviteToken: user.inviteToken ?? null,
-      activated: user.activated ?? false,
+      activated: user.activated ?? true, // guests set activated:false explicitly; regular users default to true
     },
   });
   return mapUser(created);

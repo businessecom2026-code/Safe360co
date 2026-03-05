@@ -8,7 +8,7 @@ import {
 } from './emailTemplates';
 
 const FROM = process.env.RESEND_FROM || 'Safe360 <info@ecom360.co>';
-const APP_URL = process.env.APP_URL || 'http://localhost:3000';
+const APP_URL = process.env.APP_URL_PROD || process.env.APP_URL || 'http://localhost:3000';
 
 // Lazy — only instantiate when RESEND_API_KEY is available at send time
 let _resend: Resend | null = null;
