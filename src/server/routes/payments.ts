@@ -132,11 +132,12 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
   if (event.type === 'ORDER_COMPLETED') {
     const merchantRef: string = event.order?.merchant_order_ext_ref || '';
     // Format: safe360_<userId>_<plan>_<timestamp>
-    const parts = merchantRef.split('_');
-    // parts[0] = 'safe360', parts[1] = userId, parts[2] = plan
-    const userId = parts[1];
-    const rawPlan = parts[2] ? parts[2].charAt(0).toUpperCase() + parts[2].slice(1) : null;
+    // userId may contain underscores (e.g. user_1772713426220), so parse from the end
     const VALID_PLANS = ['Free', 'Pro', 'Scale'] as const;
+    const parts = merchantRef.split('_');
+    // Last part is timestamp, second-to-last is plan, everything between is userId
+    const rawPlan = parts[parts.length - 2] ?? '';
+    const userId = parts.slice(1, parts.length - 2).join('_');
     type ValidPlan = typeof VALID_PLANS[number];
     const plan: ValidPlan | null = VALID_PLANS.includes(rawPlan as ValidPlan) ? (rawPlan as ValidPlan) : null;
 

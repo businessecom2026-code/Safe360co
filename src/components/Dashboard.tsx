@@ -215,7 +215,7 @@ export function Dashboard({ onLogout, onBackToHome, onAdminConsole, user }: Dash
     const amount = nextPlan === 'Pro' ? 500 : 1500;
     prepareRevolutCheckout(amount, 'EUR', user.id, nextPlan)
       .then(handle => setUpgradeRevolutHandle(handle))
-      .catch((err: RevolutError) => console.warn('[upgrade] Pre-create failed:', err.rawMessage));
+      .catch((err: RevolutError) => { console.warn('[upgrade] Pre-create failed:', err.rawMessage); showToast(err.rawMessage || 'Erro ao preparar pagamento.', 'error'); });
   }, [showSettings, user?.plan]);
 
   useEffect(() => {
@@ -797,9 +797,9 @@ export function Dashboard({ onLogout, onBackToHome, onAdminConsole, user }: Dash
             userRole={user?.role}
             onLogout={onLogout}
             currentPlan={(user?.plan?.toLowerCase() || 'free') as 'free' | 'pro' | 'scale'}
-            isProcessing={false}
+            isProcessing={!upgradeRevolutHandle}
             onUpgrade={() => {
-              if (!upgradeRevolutHandle) return;
+              if (!upgradeRevolutHandle) { showToast('A preparar pagamento, tente novamente.', 'error'); return; }
               const nextPlan = user?.plan === 'Free' ? 'Pro' : 'Scale';
 
               // Direct call — synchronous inside click handler → no popup block
