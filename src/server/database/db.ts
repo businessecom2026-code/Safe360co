@@ -40,6 +40,7 @@ export const getGuestsByInviter   = m.getGuestsByInviter;
 export const updateUser           = m.updateUser;
 export const updateUserByIndex    = m.updateUserByIndex;
 export const countGuestsByInviter = m.countGuestsByInviter;
+export const deleteUser           = m.deleteUser;
 export const getUsers             = m.getUsers;
 
 export const getVaults         = m.getVaults;

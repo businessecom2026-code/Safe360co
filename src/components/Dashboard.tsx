@@ -1,7 +1,7 @@
 import {
   ShieldCheck, LogOut, Plus, RefreshCw, Settings, ArrowLeft, Trash2,
   Lock, Check, XCircle, Clock, UserPlus, Copy, CheckCircle, Eye, EyeOff,
-  FolderPlus, Home, Paperclip, Pencil,
+  FolderPlus, Home, Paperclip, Pencil, X,
 } from 'lucide-react';
 import { hashPin, PinStore } from '../utils/pinUtils';
 import { useState, useEffect, useCallback } from 'react';
@@ -130,6 +130,7 @@ export function Dashboard({ onLogout, onBackToHome, onAdminConsole, user }: Dash
   const [inviteLink, setInviteLink] = useState('');
   const [inviteLoading, setInviteLoading] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
+  const [guestActionLoading, setGuestActionLoading] = useState<string | null>(null);
 
   // Revolut pre-created handles (pre-init before user clicks Pay)
   const [inviteRevolutHandle, setInviteRevolutHandle] = useState<RevolutCheckoutHandle | null>(null);
@@ -172,6 +173,33 @@ export function Dashboard({ onLogout, onBackToHome, onAdminConsole, user }: Dash
       const res = await authFetch('/api/auth/guests', { headers: { Authorization: `Bearer ${token}` } });
       if (res.ok) setGuests(await res.json());
     } catch { /* silent */ }
+  };
+
+  const handleResendInvite = async (guestId: string, guestEmail: string) => {
+    if (!token || guestActionLoading) return;
+    setGuestActionLoading(guestId);
+    try {
+      const res = await authFetch(`/api/auth/guests/${guestId}/resend`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+      const data = await res.json();
+      if (res.ok) {
+        navigator.clipboard.writeText(data.inviteLink).catch(() => {});
+        showToast(data.emailSent ? t.dashboard.access.inviteSuccess : `${t.dashboard.access.copyLink}: ${data.inviteLink}`);
+      } else {
+        showToast(data.message || 'Erro ao reenviar.', 'error');
+      }
+    } catch { showToast('Erro ao reenviar.', 'error'); }
+    finally { setGuestActionLoading(null); }
+  };
+
+  const handleRemoveGuest = async (guestId: string) => {
+    if (!token || guestActionLoading) return;
+    setGuestActionLoading(guestId);
+    try {
+      const res = await authFetch(`/api/auth/guests/${guestId}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) { setGuests(prev => prev.filter(g => g.id !== guestId)); showToast(t.dashboard.access.removeGuest); }
+      else { const d = await res.json(); showToast(d.message || 'Erro ao remover.', 'error'); }
+    } catch { showToast('Erro ao remover.', 'error'); }
+    finally { setGuestActionLoading(null); }
   };
 
   const fetchFolderContents = useCallback(async (vaultId: string, parentId: string | null) => {
@@ -1717,11 +1745,33 @@ export function Dashboard({ onLogout, onBackToHome, onAdminConsole, user }: Dash
             ) : (
               <div className="space-y-2">
                 {guests.map(guest => (
-                  <div key={guest.id} className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-3 flex items-center justify-between">
-                    <div><p className="font-medium text-sm">{guest.email}</p><p className="text-xs text-slate-400">{new Date(guest.createdAt).toLocaleDateString()}</p></div>
-                    <span className={`text-xs px-2 py-1 rounded-full font-medium ${guest.activated ? 'bg-green-100 dark:bg-green-900/30 text-green-600' : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600'}`}>
-                      {guest.activated ? t.dashboard.access.active : t.dashboard.access.pending}
-                    </span>
+                  <div key={guest.id} className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-3 flex items-center justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-sm truncate">{guest.email}</p>
+                      <p className="text-xs text-slate-400">{new Date(guest.createdAt).toLocaleDateString()}</p>
+                    </div>
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                      <span className={`text-xs px-2 py-1 rounded-full font-medium ${guest.activated ? 'bg-green-100 dark:bg-green-900/30 text-green-600' : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600'}`}>
+                        {guest.activated ? t.dashboard.access.active : t.dashboard.access.pending}
+                      </span>
+                      {!guest.activated && (
+                        <button
+                          onClick={() => handleResendInvite(guest.id, guest.email)}
+                          disabled={guestActionLoading === guest.id}
+                          className="text-xs px-2 py-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg transition-colors"
+                        >
+                          {guestActionLoading === guest.id ? '…' : t.dashboard.access.resendInvite}
+                        </button>
+                      )}
+                      <button
+                        onClick={() => handleRemoveGuest(guest.id)}
+                        disabled={guestActionLoading === guest.id}
+                        className="p-1 text-slate-400 hover:text-red-500 disabled:opacity-50 transition-colors"
+                        title={t.dashboard.access.removeGuest}
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>

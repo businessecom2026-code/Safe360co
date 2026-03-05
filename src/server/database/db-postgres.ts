@@ -233,6 +233,15 @@ export async function countGuestsByInviter(inviterId: string): Promise<number> {
   return prisma.user.count({ where: { invitedBy: inviterId } });
 }
 
+export async function deleteUser(id: string): Promise<boolean> {
+  try {
+    await prisma.user.delete({ where: { id } });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 // ════════════════════════════════════════════════════════════════
 //  VAULTS
 // ════════════════════════════════════════════════════════════════

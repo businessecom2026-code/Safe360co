@@ -10,7 +10,7 @@ import { getPlanLimits } from '../utils/planLimits';
 import {
   getUserByEmail, getUserById, getUserByResetToken, getUserByInviteToken,
   createUser, updateUser, countGuestsByInviter, getGuestsByInviter,
-  logActivity, getUserActivityLogs,
+  deleteUser, logActivity, getUserActivityLogs,
 } from '../database/db';
 import { sendInviteEmail, sendPasswordResetEmail, sendWelcomeEmail, sendGuestActivatedNotification, sendSupportEmail } from '../utils/emailService';
 
@@ -143,6 +143,43 @@ router.post('/invite/:token/activate', async (req, res) => {
 
   const jwtToken = jwt.sign({ id: guest.id, role: guest.role }, JWT_SECRET, { expiresIn: '1h' });
   res.json({ message: 'Account activated successfully', token: jwtToken, user: { id: guest.id, email: guest.email, role: guest.role } });
+});
+
+// Resend invite to a pending guest
+router.post('/guests/:guestId/resend', authMiddleware, async (req: AuthRequest, res) => {
+  const inviterRole = req.user?.role;
+  if (inviterRole !== 'admin' && inviterRole !== 'master') return res.status(403).json({ message: 'Forbidden' });
+
+  const guest = await getUserById(req.params.guestId);
+  if (!guest) return res.status(404).json({ message: 'Guest not found' });
+  if (inviterRole !== 'master' && guest.invitedBy !== req.user!.id) return res.status(403).json({ message: 'Not your guest' });
+  if (guest.activated) return res.status(400).json({ message: 'Guest already activated' });
+
+  const inviteToken = crypto.randomBytes(32).toString('hex');
+  await updateUser(guest.id, { inviteToken });
+
+  const inviter = await getUserById(req.user!.id);
+  const appUrl = process.env.APP_URL_PROD || process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
+  const inviteLink = `${appUrl}/#invite=${inviteToken}`;
+  const emailSent = await sendInviteEmail(guest.email, inviter?.email || 'Administrador', inviteToken);
+
+  logActivity(req.user!.id, 'RESEND_INVITE', `Reenvio de convite para ${guest.email}`, req.ip);
+  res.json({ message: 'Invite resent', inviteLink, emailSent });
+});
+
+// Remove a guest
+router.delete('/guests/:guestId', authMiddleware, async (req: AuthRequest, res) => {
+  const inviterRole = req.user?.role;
+  if (inviterRole !== 'admin' && inviterRole !== 'master') return res.status(403).json({ message: 'Forbidden' });
+
+  const guest = await getUserById(req.params.guestId);
+  if (!guest) return res.status(404).json({ message: 'Guest not found' });
+  if (inviterRole !== 'master' && guest.invitedBy !== req.user!.id) return res.status(403).json({ message: 'Not your guest' });
+  if (guest.role !== 'guest') return res.status(400).json({ message: 'Can only remove guests' });
+
+  await deleteUser(guest.id);
+  logActivity(req.user!.id, 'REMOVE_GUEST', `Convidado removido: ${guest.email}`, req.ip);
+  res.json({ message: 'Guest removed' });
 });
 
 // List owner's guests

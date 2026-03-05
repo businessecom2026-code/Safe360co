@@ -178,6 +178,15 @@ export async function countGuestsByInviter(inviterId: string): Promise<number> {
   return users.filter(u => u.invitedBy === inviterId).length;
 }
 
+export async function deleteUser(id: string): Promise<boolean> {
+  const db = await readDb();
+  const index = db.users.findIndex(u => u.id === id);
+  if (index === -1) return false;
+  db.users.splice(index, 1);
+  await writeDb(db);
+  return true;
+}
+
 // ════════════════════════════════════════════════════════════════
 //  VAULTS
 // ════════════════════════════════════════════════════════════════
