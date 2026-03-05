@@ -19,6 +19,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const isProduction = process.env.NODE_ENV === 'production';
+const railwayEnv = process.env.RAILWAY_ENVIRONMENT || 'local'; // 'production' | 'staging' | 'local'
 
 // ─── Validate critical environment variables ───
 function validateEnv() {
@@ -89,7 +90,7 @@ async function startServer() {
   });
 
   app.get('/api/health', (req, res) => {
-    res.json({ status: 'ok', env: isProduction ? 'production' : 'development', version: '1.0.0' });
+    res.json({ status: 'ok', env: isProduction ? 'production' : 'development', railway: railwayEnv, version: '1.0.0' });
   });
 
   if (isProduction) {
@@ -124,7 +125,11 @@ async function startServer() {
   }
 
   app.listen(PORT, '0.0.0.0', () => {
-    console.log(`\n🔒 Safe360 v1.0.0 running on port ${PORT} [${isProduction ? 'PRODUCTION' : 'DEVELOPMENT'}]\n`);
+    const dbUrl = process.env.DATABASE_URL ? process.env.DATABASE_URL.replace(/:[^:@]+@/, ':***@') : 'NOT SET';
+    console.log(`\n🔒 Safe360 v1.0.0 running on port ${PORT}`);
+    console.log(`   Environment : ${isProduction ? 'PRODUCTION' : 'DEVELOPMENT'}`);
+    console.log(`   Railway env : ${railwayEnv}`);
+    console.log(`   Database    : ${dbUrl}\n`);
   });
 }
 
