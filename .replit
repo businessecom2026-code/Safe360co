@@ -6,8 +6,10 @@ modules = ["nodejs-20", "web", "nix"]
 channel = "stable-24_05"
 
 [deployment]
-deploymentTarget = "reserved_vm"
+deploymentTarget = "gce"
 run = ["sh", "-c", "npm install && npm run build && npm run start:replit"]
+publicDir = "dist/public"
+ignorePorts = true
 
 [[ports]]
 localPort = 3000
