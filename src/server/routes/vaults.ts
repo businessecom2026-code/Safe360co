@@ -171,12 +171,19 @@ router.put('/:vaultId/items/:itemId', authMiddleware, async (req: AuthRequest, r
 
   const vault = await getVaultById(req.params.vaultId);
   if (!vault) return res.status(404).json({ message: 'Vault not found' });
-  if (vault.userId !== userId && userRole !== 'master') return res.status(403).json({ message: 'Forbidden' });
 
-  // Guests cannot modify their own pending items — admin must approve/reject first
-  const existingItem = vault.data?.find((i: VaultItem) => i.id === req.params.itemId);
-  if (existingItem?.status === 'pending' && userRole === 'guest') {
-    return res.status(403).json({ message: 'Cannot modify a pending item. Awaiting admin approval.' });
+  if (vault.userId !== userId && userRole !== 'master') {
+    if (userRole === 'admin') {
+      const vaultOwner = await getUserById(vault.userId);
+      if (vaultOwner?.invitedBy !== userId) return res.status(403).json({ message: 'Forbidden' });
+    } else {
+      return res.status(403).json({ message: 'Forbidden' });
+    }
+  }
+
+  // Guests cannot modify items — admin must approve/reject first
+  if (userRole === 'guest') {
+    return res.status(403).json({ message: 'Guests cannot modify items.' });
   }
 
   const updates: Partial<VaultItem> = {};
@@ -237,7 +244,15 @@ router.delete('/:vaultId/items/:itemId', authMiddleware, async (req: AuthRequest
 
   const vault = await getVaultById(req.params.vaultId);
   if (!vault) return res.status(404).json({ message: 'Vault not found' });
-  if (vault.userId !== userId && userRole !== 'master') return res.status(403).json({ message: 'Forbidden' });
+
+  if (vault.userId !== userId && userRole !== 'master') {
+    if (userRole === 'admin') {
+      const vaultOwner = await getUserById(vault.userId);
+      if (vaultOwner?.invitedBy !== userId) return res.status(403).json({ message: 'Forbidden' });
+    } else {
+      return res.status(403).json({ message: 'Forbidden' });
+    }
+  }
 
   const deleted = await deleteVaultItem(req.params.vaultId, req.params.itemId);
   if (!deleted) return res.status(404).json({ message: 'Item not found' });

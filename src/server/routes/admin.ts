@@ -1,5 +1,5 @@
 import express from 'express';
-import { authMiddleware, AuthRequest } from '../middleware/auth';
+import { authMiddleware, requireMaster, AuthRequest } from '../middleware/auth';
 import { getUsers, getVaults, updateUser } from '../database/db';
 
 const router = express.Router();
@@ -11,13 +11,7 @@ const STORAGE_LIMITS: Record<string, number> = {
 };
 
 // Get all clients data for master admin (hierarchical: admins with their guests)
-router.get('/clients', authMiddleware, async (req: AuthRequest, res) => {
-  const userRole = req.user?.role;
-
-  if (userRole !== 'master') {
-    return res.status(403).json({ message: 'Forbidden: Master Admin access required' });
-  }
-
+router.get('/clients', authMiddleware, requireMaster, async (req: AuthRequest, res) => {
   try {
     const users = await getUsers();
     const vaults = await getVaults();
@@ -65,13 +59,7 @@ router.get('/clients', authMiddleware, async (req: AuthRequest, res) => {
 });
 
 // Update plan for a specific user
-router.put('/clients/:id/plan', authMiddleware, async (req: AuthRequest, res) => {
-  const userRole = req.user?.role;
-
-  if (userRole !== 'master') {
-    return res.status(403).json({ message: 'Forbidden: Master Admin access required' });
-  }
-
+router.put('/clients/:id/plan', authMiddleware, requireMaster, async (req: AuthRequest, res) => {
   const { id } = req.params;
   const { plan, planExpiresAt } = req.body;
 

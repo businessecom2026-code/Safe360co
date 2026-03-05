@@ -22,3 +22,17 @@ export const authMiddleware = (req: AuthRequest, res: Response, next: NextFuncti
     res.status(400).json({ message: 'Invalid token' });
   }
 };
+
+export const requireMaster = (req: AuthRequest, res: Response, next: NextFunction) => {
+  if (req.user?.role !== 'master') {
+    return res.status(403).json({ message: 'Forbidden: Master Admin access required' });
+  }
+  next();
+};
+
+export const requireAdminOrMaster = (req: AuthRequest, res: Response, next: NextFunction) => {
+  if (req.user?.role !== 'admin' && req.user?.role !== 'master') {
+    return res.status(403).json({ message: 'Forbidden: Admin access required' });
+  }
+  next();
+};
